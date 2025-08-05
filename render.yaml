@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: hpnt-eng-manager
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: chmod +x start.sh && ./start.sh
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.18
+      - key: RENDER
+        value: true
+    healthCheckPath: /
