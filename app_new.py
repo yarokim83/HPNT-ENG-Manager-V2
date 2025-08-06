@@ -410,7 +410,6 @@ REQUESTS_TEMPLATE = '''
             <div style="margin-top: 20px;">
                 <a href="/" class="btn btn-primary">🏠 홈으로</a>
                 <a href="/add" class="btn btn-success">➕ 새 요청</a>
-                <button onclick="reindexIds()" class="btn" style="background: #fd7e14; color: white; margin-left: 10px;">🔄 ID 재정렬</button>
             </div>
         </div>
         
@@ -796,28 +795,7 @@ REQUESTS_TEMPLATE = '''
             }
         }
         
-        // ID 재정렬 함수
-        function reindexIds() {
-            if (confirm('모든 자재요청의 ID를 1번부터 다시 정렬하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다.')) {
-                fetch('/admin/reindex', {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('✅ ID 재정렬이 완료되었습니다!');
-                        location.reload();
-                    } else {
-                        alert('❌ ID 재정렬 실패: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('❌ ID 재정렬 중 오류가 발생했습니다.');
-                });
-            }
-        }
-        
+
     </script>
 </body>
 </html>
@@ -1495,17 +1473,6 @@ def admin_delete_request(request_id):
         
     except Exception as e:
         logger.error(f"관리자 삭제 실패: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/admin/reindex', methods=['POST'])
-def admin_reindex_ids():
-    """관리자 ID 재정렬 수동 실행"""
-    try:
-        reindex_material_request_ids()
-        logger.info("관리자 수동 ID 재정렬 완료")
-        return jsonify({'success': True, 'message': 'ID 재정렬이 완료되었습니다.'})
-    except Exception as e:
-        logger.error(f"관리자 ID 재정렬 실패: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # PWA 서비스 워커 비활성화 (캐시 문제 해결)
