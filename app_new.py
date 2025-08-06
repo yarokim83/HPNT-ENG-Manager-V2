@@ -1349,6 +1349,9 @@ def reindex_material_request_ids():
         conn.close()
         
         logger.info(f"ID 재정렬 완료: {len(all_data)}개 항목")
+    except Exception as e:
+        logger.error(f"ID 재정렬 실패: {e}")
+        raise e
 
 
 @app.route('/admin/edit/<int:request_id>', methods=['POST'])
