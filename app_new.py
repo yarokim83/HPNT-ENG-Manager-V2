@@ -107,9 +107,92 @@ def get_images_dir_path():
             logger.info(f"OneDrive 이미지 폴더 생성: {onedrive_images_path}")
         return onedrive_images_path
 
+def create_db_backup():
+    """DB 백업 생성 (JSON 형태로 저장)"""
+    try:
+        db_path = get_material_db_path()
+        if not os.path.exists(db_path):
+            return None
+        
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # 모든 자재요청 데이터 조회
+        cursor.execute("SELECT * FROM material_requests ORDER BY id")
+        rows = cursor.fetchall()
+        
+        # 컬럼명 조회
+        cursor.execute("PRAGMA table_info(material_requests)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        conn.close()
+        
+        # JSON 형태로 백업 데이터 생성
+        backup_data = {
+            'backup_date': datetime.now().isoformat(),
+            'total_records': len(rows),
+            'columns': columns,
+            'data': [dict(zip(columns, row)) for row in rows]
+        }
+        
+        return backup_data
+        
+    except Exception as e:
+        logger.error(f"DB 백업 생성 실패: {e}")
+        return None
+
+def restore_db_from_backup(backup_data):
+    """백업 데이터로부터 DB 복구"""
+    try:
+        if not backup_data or 'data' not in backup_data:
+            return False
+        
+        db_path = get_material_db_path()
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # 기존 데이터 삭제
+        cursor.execute("DELETE FROM material_requests")
+        
+        # 백업 데이터 복구
+        for record in backup_data['data']:
+            cursor.execute('''
+                INSERT INTO material_requests 
+                (id, request_date, item_name, specifications, quantity, urgency, reason, vendor, status, images, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                record.get('id'),
+                record.get('request_date'),
+                record.get('item_name'),
+                record.get('specifications'),
+                record.get('quantity'),
+                record.get('urgency'),
+                record.get('reason'),
+                record.get('vendor'),
+                record.get('status'),
+                record.get('images'),
+                record.get('created_at')
+            ))
+        
+        # 시퀀스 재설정
+        max_id = max([record.get('id', 0) for record in backup_data['data']], default=0)
+        cursor.execute('DELETE FROM sqlite_sequence WHERE name="material_requests"')
+        cursor.execute('INSERT INTO sqlite_sequence (name, seq) VALUES ("material_requests", ?)', (max_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"✅ DB 백업 복구 완료: {backup_data['total_records']}개 레코드")
+        return True
+        
+    except Exception as e:
+        logger.error(f"DB 백업 복구 실패: {e}")
+        return False
+
 def init_material_database():
-    """자재관리 데이터베이스 초기화"""
+    """자재관리 데이터베이스 초기화 - Render 환경 자동 복구 지원"""
     db_path = get_material_db_path()
+    db_exists = os.path.exists(db_path)
     
     try:
         # 데이터베이스 디렉토리 생성
@@ -138,10 +221,53 @@ def init_material_database():
         )
         ''')
         
+        # 🔥 Render 환경에서 DB 파일이 새로 생성된 경우 자동 복구 시도
+        if is_cloud_env() and not db_exists:
+            logger.warning("🚨 Render 환경에서 DB 파일이 없어 새로 생성됨 - 자동 복구 시도")
+            
+            # 1단계: 환경 변수에서 백업 데이터 복구 시도
+            backup_json = os.environ.get('DB_BACKUP_JSON')
+            if backup_json:
+                try:
+                    import json
+                    backup_data = json.loads(backup_json)
+                    if restore_db_from_backup(backup_data):
+                        logger.info("✅ 환경 변수 백업으로부터 DB 자동 복구 성공")
+                    else:
+                        raise Exception("백업 복구 실패")
+                except Exception as backup_error:
+                    logger.error(f"환경 변수 백업 복구 실패: {backup_error}")
+                    # 2단계: 백업 복구 실패 시 샘플 데이터 삽입
+                    insert_sample_data = True
+            else:
+                # 환경 변수 백업이 없으면 샘플 데이터 삽입
+                insert_sample_data = True
+            
+            # 샘플 데이터 삽입 (백업 복구 실패 시 또는 백업이 없을 때)
+            if 'insert_sample_data' in locals() and insert_sample_data:
+                logger.info("📝 샘플 데이터 자동 삽입 시작")
+                sample_data = [
+                    ('2025-01-06', '안전모', '흰색, CE 인증', 10, 'high', '현장 안전 강화를 위해 필요', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                    ('2025-01-06', '작업장갑', '면장갑, L사이즈', 20, 'normal', '작업자 보호용', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                    ('2025-01-05', '전선', '2.5sq, 100m', 3, 'normal', '전기 배선 작업용', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                ]
+                
+                cursor.executemany('''
+                    INSERT INTO material_requests 
+                    (request_date, item_name, specifications, quantity, urgency, reason, vendor, status, images, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', sample_data)
+                
+                logger.info(f"✅ Render 환경 샘플 데이터 {len(sample_data)}개 자동 삽입 완료")
+        
         conn.commit()
         conn.close()
         
-        logger.info(f"✅ 자재관리 DB 초기화 완료: {db_path}")
+        if db_exists:
+            logger.info(f"✅ 기존 자재관리 DB 연결 완료: {db_path}")
+        else:
+            logger.info(f"✅ 새 자재관리 DB 초기화 완료: {db_path}")
+        
         return True
         
     except Exception as e:
@@ -1553,18 +1679,121 @@ import io
 
 @app.route('/admin/images-download')
 def images_download():
-    """관리자: 이미지 전체 zip 다운로드 (서버→OneDrive)"""
-    images_dir = get_images_dir_path()
-    # 메모리 버퍼에 zip 생성
-    memory_file = io.BytesIO()
-    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for root, dirs, files in os.walk(images_dir):
-            for file in files:
-                file_path = os.path.join(root, file)
-                arcname = os.path.relpath(file_path, images_dir)
-                zf.write(file_path, arcname)
-    memory_file.seek(0)
-    return send_file(memory_file, download_name='images.zip', as_attachment=True)
+    """관리자: 이미지 전체 zip 다운로드"""
+    try:
+        import zipfile
+        import tempfile
+        
+        images_dir = get_images_dir_path()
+        
+        # 임시 zip 파일 생성
+        temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+        
+        with zipfile.ZipFile(temp_zip.name, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # 이미지 폴더의 모든 파일을 zip에 추가
+            if os.path.exists(images_dir):
+                for filename in os.listdir(images_dir):
+                    file_path = os.path.join(images_dir, filename)
+                    if os.path.isfile(file_path):
+                        zipf.write(file_path, filename)
+        
+        # zip 파일 다운로드 제공
+        return send_file(temp_zip.name, 
+                        as_attachment=True, 
+                        download_name=f'hpnt_images_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip',
+                        mimetype='application/zip')
+        
+    except Exception as e:
+        logger.error(f"이미지 다운로드 실패: {e}")
+        return f'<h3>❌ 이미지 다운로드 실패: {e}</h3><a href="/">홈으로</a>'
+
+@app.route('/admin/backup-create')
+def backup_create():
+    """관리자: DB 백업 생성 및 환경 변수용 JSON 출력"""
+    try:
+        backup_data = create_db_backup()
+        if backup_data:
+            import json
+            backup_json = json.dumps(backup_data, ensure_ascii=False, separators=(',', ':'))
+            
+            # HTML 형태로 결과 표시
+            html_content = f'''
+            <h2>🔄 DB 백업 생성 완료</h2>
+            <p><strong>백업 일시:</strong> {backup_data['backup_date']}</p>
+            <p><strong>총 레코드:</strong> {backup_data['total_records']}개</p>
+            
+            <h3>📋 Render 환경 변수 설정</h3>
+            <p>Render 대시보드에서 다음 환경 변수를 설정하세요:</p>
+            <ul>
+                <li><strong>변수명:</strong> <code>DB_BACKUP_JSON</code></li>
+                <li><strong>값:</strong> 아래 JSON 데이터 전체 복사</li>
+            </ul>
+            
+            <h4>🔗 JSON 백업 데이터:</h4>
+            <textarea readonly style="width:100%; height:200px; font-family:monospace; font-size:12px;">{backup_json}</textarea>
+            
+            <br><br>
+            <a href="/" class="btn">← 홈으로</a>
+            <a href="/admin/backup-create" class="btn">🔄 새로고침</a>
+            '''
+            
+            return html_content
+        else:
+            return '<h3>❌ DB 백업 생성 실패</h3><a href="/">홈으로</a>'
+            
+    except Exception as e:
+        logger.error(f"DB 백업 생성 실패: {e}")
+        return f'<h3>❌ DB 백업 생성 실패: {e}</h3><a href="/">홈으로</a>'
+
+@app.route('/admin/backup-test')
+def backup_test():
+    """관리자: 환경 변수 백업 복구 테스트"""
+    try:
+        backup_json = os.environ.get('DB_BACKUP_JSON')
+        if backup_json:
+            import json
+            backup_data = json.loads(backup_json)
+            
+            html_content = f'''
+            <h2>🧪 백업 복구 테스트</h2>
+            <p><strong>환경 변수 백업 발견:</strong> ✅</p>
+            <p><strong>백업 일시:</strong> {backup_data.get('backup_date', 'N/A')}</p>
+            <p><strong>총 레코드:</strong> {backup_data.get('total_records', 0)}개</p>
+            
+            <h3>📋 백업 데이터 미리보기:</h3>
+            <ul>
+            '''
+            
+            # 처음 3개 레코드만 미리보기
+            for i, record in enumerate(backup_data.get('data', [])[:3]):
+                html_content += f"<li>ID {record.get('id')}: {record.get('item_name')} (수량: {record.get('quantity')})</li>"
+            
+            if backup_data.get('total_records', 0) > 3:
+                html_content += f"<li>... 외 {backup_data.get('total_records') - 3}개 더</li>"
+            
+            html_content += '''
+            </ul>
+            
+            <br>
+            <a href="/" class="btn">← 홈으로</a>
+            <a href="/admin/backup-test" class="btn">🔄 새로고침</a>
+            '''
+            
+            return html_content
+        else:
+            return '''
+            <h2>🧪 백업 복구 테스트</h2>
+            <p><strong>환경 변수 백업:</strong> ❌ 없음</p>
+            <p>Render 환경 변수 <code>DB_BACKUP_JSON</code>이 설정되지 않았습니다.</p>
+            
+            <br>
+            <a href="/" class="btn">← 홈으로</a>
+            <a href="/admin/backup-create" class="btn">📋 백업 생성</a>
+            '''
+            
+    except Exception as e:
+        logger.error(f"백업 테스트 실패: {e}")
+        return f'<h3>❌ 백업 테스트 실패: {e}</h3><a href="/">홈으로</a>'
 
 if __name__ == '__main__':
     print("🚀 HPNT Manager V2.0 시작...")
