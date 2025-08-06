@@ -195,16 +195,24 @@ def restore_db_from_backup(backup_data):
         return False
 
 def init_material_database():
-    """자재관리 데이터베이스 초기화 - Render 환경 자동 복구 지원"""
+    """자재관리 데이터베이스 초기화 - Railway/Render 환경 자동 복구 지원"""
     db_path = get_material_db_path()
     db_exists = os.path.exists(db_path)
+    
+    # Railway 환경 감지 및 로깅
+    env = detect_environment()
+    is_railway = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RAILWAY_PROJECT_ID')
+    
+    logger.info(f"🚀 DB 초기화 시작 - 환경: {env}, Railway: {bool(is_railway)}")
+    logger.info(f"DB 경로: {db_path}")
+    logger.info(f"DB 파일 존재: {db_exists}")
     
     try:
         # 데이터베이스 디렉토리 생성
         db_dir = os.path.dirname(db_path)
         if not os.path.exists(db_dir):
             os.makedirs(db_dir, exist_ok=True)
-            logger.info(f"DB 디렉토리 생성: {db_dir}")
+            logger.info(f"📁 DB 디렉토리 생성: {db_dir}")
         
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -226,9 +234,9 @@ def init_material_database():
         )
         ''')
         
-        # 🔥 Render 환경에서 DB 파일이 새로 생성된 경우 다단계 자동 복구 시도
-        if is_cloud_env() and not db_exists:
-            logger.warning("🚨 Render 환경에서 DB 파일이 없어 새로 생성됨 - 다단계 자동 복구 시도")
+        # 🔥 Railway/Render 환경에서 DB 파일이 새로 생성된 경우 다단계 자동 복구 시도
+        if (is_cloud_env() or is_railway) and not db_exists:
+            logger.warning(f"🚨 {env} 환경에서 DB 파일이 없어 새로 생성됨 - 다단계 자동 복구 시도")
             
             recovery_success = False
             
@@ -273,7 +281,29 @@ def init_material_database():
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', sample_data)
                 
-                logger.info(f"✅ Render 환경 샘플 데이터 {len(sample_data)}개 자동 삽입 완료")
+                logger.info(f"✅ {env} 환경 샘플 데이터 {len(sample_data)}개 자동 삽입 완료")
+        
+        # 🚂 Railway 환경에서는 항상 샘플 데이터 확인 및 강제 삽입
+        if is_railway:
+            cursor.execute("SELECT COUNT(*) FROM material_requests")
+            record_count = cursor.fetchone()[0]
+            logger.info(f"🔍 현재 DB 레코드 수: {record_count}개")
+            
+            if record_count == 0:
+                logger.info("🚂 Railway 환경 - 빈 DB 감지, 샘플 데이터 강제 삽입")
+                sample_data = [
+                    ('2025-08-06', '🚂 Railway 테스트', 'Railway 배포 테스트용', 1, 'high', 'Railway 환경 DB 테스트', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                    ('2025-08-06', '안전모', '흰색, CE 인증', 10, 'normal', '현장 안전용', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                    ('2025-08-06', '작업장갑', '면장갑, L사이즈', 20, 'normal', '작업자 보호용', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                ]
+                
+                cursor.executemany('''
+                    INSERT INTO material_requests 
+                    (request_date, item_name, specifications, quantity, urgency, reason, vendor, status, images, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', sample_data)
+                
+                logger.info(f"✅ Railway 환경 샘플 데이터 {len(sample_data)}개 강제 삽입 완료")
         
         conn.commit()
         conn.close()
