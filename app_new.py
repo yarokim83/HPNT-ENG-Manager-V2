@@ -39,8 +39,13 @@ APP_VERSION = datetime.now().strftime('%Y%m%d_%H%M%S')
 # 환경 감지
 def detect_environment():
     """실행 환경 감지"""
-    if os.environ.get('RENDER'):
-        return 'render'
+    if (
+        os.environ.get('RENDER') or 
+        os.environ.get('RAILWAY_ENVIRONMENT') or
+        os.environ.get('RAILWAY_PROJECT_ID') or
+        (os.environ.get('PORT') and not os.path.exists('C:\\Windows'))
+    ):
+        return 'cloud'
     elif os.environ.get('RAILWAY_ENVIRONMENT'):
         return 'railway'
     elif sys.platform == 'ios':
@@ -221,9 +226,11 @@ def init_material_database():
         )
         ''')
         
-        # 🔥 Render 환경에서 DB 파일이 새로 생성된 경우 자동 복구 시도
+        # 🔥 Render 환경에서 DB 파일이 새로 생성된 경우 다단계 자동 복구 시도
         if is_cloud_env() and not db_exists:
-            logger.warning("🚨 Render 환경에서 DB 파일이 없어 새로 생성됨 - 자동 복구 시도")
+            logger.warning("🚨 Render 환경에서 DB 파일이 없어 새로 생성됨 - 다단계 자동 복구 시도")
+            
+            recovery_success = False
             
             # 1단계: 환경 변수에서 백업 데이터 복구 시도
             backup_json = os.environ.get('DB_BACKUP_JSON')
@@ -233,14 +240,22 @@ def init_material_database():
                     backup_data = json.loads(backup_json)
                     if restore_db_from_backup(backup_data):
                         logger.info("✅ 환경 변수 백업으로부터 DB 자동 복구 성공")
+                        recovery_success = True
                     else:
                         raise Exception("백업 복구 실패")
                 except Exception as backup_error:
                     logger.error(f"환경 변수 백업 복구 실패: {backup_error}")
-                    # 2단계: 백업 복구 실패 시 샘플 데이터 삽입
-                    insert_sample_data = True
-            else:
-                # 환경 변수 백업이 없으면 샘플 데이터 삽입
+            
+            # 2단계: GitHub 저장소에서 기본 백업 다운로드 시도 (미래 확장용)
+            if not recovery_success:
+                try:
+                    # GitHub 또는 외부 URL에서 기본 백업 다운로드 로직 (미래 구현)
+                    logger.info("🔍 외부 백업 소스 확인 중... (미래 구현 예정)")
+                except Exception as external_error:
+                    logger.warning(f"외부 백업 소스 접근 실패: {external_error}")
+            
+            # 3단계: 모든 복구 시도 실패 시 샘플 데이터 삽입
+            if not recovery_success:
                 insert_sample_data = True
             
             # 샘플 데이터 삽입 (백업 복구 실패 시 또는 백업이 없을 때)
