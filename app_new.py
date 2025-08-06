@@ -215,8 +215,8 @@ HOME_TEMPLATE = '''
         </div>
         
         <div style="text-align: center;">
-            <a href="/requests" class="btn btn-primary">📋 자재요청 목록</a>
-            <a href="/stats" class="btn btn-info">📊 통계 보기</a>
+            <a href="/requests?v={{ version }}" class="btn btn-primary">📋 자재요청 목록</a>
+            <a href="/stats?v={{ version }}" class="btn btn-info">📊 통계 보기</a>
         </div>
     </div>
 </body>
@@ -1118,7 +1118,12 @@ ADD_TEMPLATE = '''
 # Flask 라우트 함수들
 @app.route('/')
 def home():
-    """메인 홈페이지"""
+    """메인 홈페이지 - 캐시 무효화 리다이렉트"""
+    # 버전 파라미터가 없으면 리다이렉트
+    version_param = request.args.get('v')
+    if not version_param:
+        return redirect(f'/?v={APP_VERSION}')
+    
     try:
         env = detect_environment().upper()
         db_location = "로컬 DB (프로젝트/db)"
