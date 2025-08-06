@@ -1786,35 +1786,49 @@ def backup_test():
             if backup_data.get('total_records', 0) > 3:
                 html_content += f"<li>... 외 {backup_data.get('total_records') - 3}개 더</li>"
             
-            html_content += '''
-            </ul>
-            
-            <br>
-            <a href="/" class="btn">← 홈으로</a>
-            <a href="/admin/backup-test" class="btn">🔄 새로고침</a>
+            html_content += '''</ul>
+            </div>
             '''
             
             return html_content
-        else:
-            return '''
-            <h2>🧪 백업 복구 테스트</h2>
-            <p><strong>환경 변수 백업:</strong> ❌ 없음</p>
-            <p>Render 환경 변수 <code>DB_BACKUP_JSON</code>이 설정되지 않았습니다.</p>
-            
-            <br>
-            <a href="/" class="btn">← 홈으로</a>
-            <a href="/admin/backup-create" class="btn">📋 백업 생성</a>
-            '''
-            
+        
     except Exception as e:
-        logger.error(f"백업 테스트 실패: {e}")
-        return f'<h3>❌ 백업 테스트 실패: {e}</h3><a href="/">홈으로</a>'
+        logger.error(f"DB 백업 미리보기 실패: {e}")
+        return f"<div class='alert alert-danger'>백업 미리보기 실패: {str(e)}</div>"
+    
+    return "<div class='alert alert-warning'>백업 데이터가 없습니다.</div>"
+
 
 if __name__ == '__main__':
-    print("🚀 HPNT Manager V2.0 시작...")
+    print("=" * 50)
+    print("🚀 HPNT ENG Manager V2.0 시작")
+    print("=" * 50)
+
+    # 실행 환경 정보 출력
+    env = detect_environment()
+    print(f"실행 환경: {env}")
+
+    # DB 초기화
+    if init_material_database():
+        db_path = get_material_db_path()
+        print(f"DB 경로: {db_path}")
+        print("DB 초기화 완료")
+    else:
+        print("⚠️ DB 초기화 실패")
+
+    # Railway 환경에서는 PORT 환경 변수 사용
+    port = int(os.environ.get('PORT', 5001))
+    host = '0.0.0.0'  # Railway에서는 모든 인터페이스에서 수신해야 함
+    
+    print(f"서버 시작: {host}:{port}")
     print("=" * 50)
     
-    # 환경 정보 출력
+    # Flask 앱 실행
+    app.run(
+        host=host,
+        port=port,
+        debug=False  # 프로덕션 환경에서는 debug=False
+    )
     env = detect_environment()
     print(f"📱 실행 환경: {env}")
     
