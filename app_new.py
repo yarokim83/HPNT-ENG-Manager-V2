@@ -30,7 +30,11 @@ def after_request(response):
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
+    response.headers['Last-Modified'] = datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
     return response
+
+# 버전 정보 (캐시 무효화용)
+APP_VERSION = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 # 환경 감지
 def detect_environment():
@@ -153,6 +157,10 @@ HOME_TEMPLATE = '''
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>HPNT ENG Manager V2.0</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="version" content="{{ version }}">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
@@ -1117,7 +1125,8 @@ def home():
         
         return render_template_string(HOME_TEMPLATE, 
                                     environment=env,
-                                    db_location=db_location)
+                                    db_location=db_location,
+                                    version=APP_VERSION)
     except Exception as e:
         logger.error(f"홈페이지 로드 실패: {e}")
         return f"<h1>❌ 오류</h1><p>페이지를 불러올 수 없습니다: {e}</p>"
