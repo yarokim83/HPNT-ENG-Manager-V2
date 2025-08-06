@@ -1547,6 +1547,25 @@ def db_download():
     return send_file(db_path, as_attachment=True)
 
 
+from flask import send_file
+import zipfile
+import io
+
+@app.route('/admin/images-download')
+def images_download():
+    """관리자: 이미지 전체 zip 다운로드 (서버→OneDrive)"""
+    images_dir = get_images_dir_path()
+    # 메모리 버퍼에 zip 생성
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(images_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, images_dir)
+                zf.write(file_path, arcname)
+    memory_file.seek(0)
+    return send_file(memory_file, download_name='images.zip', as_attachment=True)
+
 if __name__ == '__main__':
     print("🚀 HPNT Manager V2.0 시작...")
     print("=" * 50)
