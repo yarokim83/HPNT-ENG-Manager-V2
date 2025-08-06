@@ -1475,38 +1475,43 @@ def admin_delete_request(request_id):
         logger.error(f"관리자 삭제 실패: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# PWA 서비스 워커
+# PWA 서비스 워커 비활성화 (캐시 문제 해결)
 @app.route('/sw.js')
 def service_worker():
-    """PWA 서비스 워커"""
+    """서비스 워커 비활성화 - 기존 캐시 제거"""
     sw_content = '''
-const CACHE_NAME = 'hpnt-manager-v2-cache';
-const urlsToCache = [
-    '/',
-    '/requests',
-    '/add',
-    '/stats'
-];
-
+// 기존 서비스 워커 비활성화 및 캐시 제거
 self.addEventListener('install', function(event) {
+    // 기존 캐시 제거
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(function(cache) {
-                return cache.addAll(urlsToCache);
-            })
+        caches.keys().then(function(cacheNames) {
+            return Promise.all(
+                cacheNames.map(function(cacheName) {
+                    console.log('캐시 제거:', cacheName);
+                    return caches.delete(cacheName);
+                })
+            );
+        })
     );
+    // 즉시 활성화
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+    // 모든 클라이언트 제어
+    event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', function(event) {
-    event.respondWith(
-        caches.match(event.request)
-            .then(function(response) {
-                if (response) {
-                    return response;
-                }
-                return fetch(event.request);
-            })
-    );
+    // 캐시 사용 안 함 - 항상 네트워크에서 가져오기
+    event.respondWith(fetch(event.request));
+});
+
+// 서비스 워커 자체 제거
+self.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
 '''
     return sw_content, 200, {'Content-Type': 'application/javascript'}
