@@ -23,6 +23,15 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = 'hpnt-manager-v2-2025'
 
+# 브라우저 캐시 방지 설정
+@app.after_request
+def after_request(response):
+    """브라우저 캐시 방지 헤더 추가"""
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 # 환경 감지
 def detect_environment():
     """실행 환경 감지"""
@@ -44,26 +53,55 @@ def is_cloud_env():
     return detect_environment() in ['render', 'railway']
 
 def get_material_db_path():
-    """자재관리 DB 경로 결정"""
-    # 프로젝트 내 db 폴더 사용
-    if getattr(sys, 'frozen', False):
-        # 실행파일 환경
-        current_dir = os.path.dirname(sys.executable)
+    """자재관리 DB 경로 결정 - OneDrive 연동"""
+    # 클라우드 환경에서는 기존 로컬 경로 사용
+    if is_cloud_env():
+        if getattr(sys, 'frozen', False):
+            current_dir = os.path.dirname(sys.executable)
+        else:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        db_folder = os.path.join(current_dir, 'db')
+        if not os.path.exists(db_folder):
+            os.makedirs(db_folder, exist_ok=True)
+            logger.info(f"클라우드 DB 폴더 생성: {db_folder}")
+        
+        db_path = os.path.join(db_folder, 'material_rq.db')
+        logger.info(f"클라우드 DB 경로: {db_path}")
+        return db_path
+    
+    # 로컬 환경에서는 OneDrive 경로 사용
     else:
-        # 스크립트 환경
+        # OneDrive 경로 설정
+        onedrive_path = os.path.join(os.path.expanduser("~"), "OneDrive", "HPNT_Manager", "db")
+        
+        # OneDrive db 폴더가 없으면 생성
+        if not os.path.exists(onedrive_path):
+            os.makedirs(onedrive_path, exist_ok=True)
+            logger.info(f"OneDrive DB 폴더 생성: {onedrive_path}")
+        
+        db_path = os.path.join(onedrive_path, 'material_rq.db')
+        logger.info(f"OneDrive DB 경로: {db_path}")
+        return db_path
+
+def get_images_dir_path():
+    """이미지 폴더 경로 결정 - OneDrive 연동"""
+    # 클라우드 환경에서는 기존 로컬 경로 사용
+    if is_cloud_env():
         current_dir = os.path.dirname(os.path.abspath(__file__))
+        images_dir = os.path.join(current_dir, 'db', 'images')
+        if not os.path.exists(images_dir):
+            os.makedirs(images_dir, exist_ok=True)
+            logger.info(f"클라우드 이미지 폴더 생성: {images_dir}")
+        return images_dir
     
-    # db 폴더 경로 생성
-    db_folder = os.path.join(current_dir, 'db')
-    
-    # db 폴더가 없으면 생성
-    if not os.path.exists(db_folder):
-        os.makedirs(db_folder, exist_ok=True)
-        logger.info(f"DB 폴더 생성: {db_folder}")
-    
-    db_path = os.path.join(db_folder, 'material_rq.db')
-    logger.info(f"로컬 DB 경로: {db_path}")
-    return db_path
+    # 로컬 환경에서는 OneDrive 경로 사용
+    else:
+        onedrive_images_path = os.path.join(os.path.expanduser("~"), "OneDrive", "HPNT_Manager", "images")
+        if not os.path.exists(onedrive_images_path):
+            os.makedirs(onedrive_images_path, exist_ok=True)
+            logger.info(f"OneDrive 이미지 폴더 생성: {onedrive_images_path}")
+        return onedrive_images_path
 
 def init_material_database():
     """자재관리 데이터베이스 초기화"""
@@ -1160,9 +1198,8 @@ def add_page():
                     header, encoded = image_data.split(',', 1)
                     image_format = header.split(';')[0].split('/')[1]  # png, jpeg 등
                     
-                    # 이미지 저장 폴더 생성
-                    images_dir = os.path.join(os.path.dirname(get_material_db_path()), 'images')
-                    os.makedirs(images_dir, exist_ok=True)
+                    # 이미지 저장 폴더 생성 (OneDrive 연동)
+                    images_dir = get_images_dir_path()
                     
                     # 고유한 파일명 생성 (타임스탬프 + 자재명)
                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -1214,9 +1251,9 @@ def stats_page():
 
 @app.route('/images/<filename>')
 def serve_image(filename):
-    """이미지 파일 서빙"""
+    """이미지 파일 서빙 - OneDrive 연동"""
     try:
-        images_dir = os.path.join(os.path.dirname(get_material_db_path()), 'images')
+        images_dir = get_images_dir_path()
         return send_from_directory(images_dir, filename)
     except Exception as e:
         logger.error(f"이미지 서빙 실패: {e}")
@@ -1406,10 +1443,10 @@ def admin_delete_request(request_id):
         # ID 재정렬 수행
         reindex_material_request_ids()
         
-        # 이미지 파일도 삭제
+        # 이미지 파일도 삭제 (OneDrive 연동)
         if image_filename:
             try:
-                images_dir = os.path.join(os.path.dirname(get_material_db_path()), 'images')
+                images_dir = get_images_dir_path()
                 image_path = os.path.join(images_dir, image_filename)
                 if os.path.exists(image_path):
                     os.remove(image_path)
