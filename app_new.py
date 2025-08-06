@@ -1321,12 +1321,17 @@ def reindex_material_request_ids():
         ''')
         all_data = cursor.fetchall()
         
-        if not all_data:
-            conn.close()
-            return
-        
         # 기존 데이터 전체 삭제
         cursor.execute('DELETE FROM material_requests')
+        
+        if not all_data:
+            # 모든 데이터가 삭제된 경우, AUTOINCREMENT 시퀀스를 0으로 재설정
+            cursor.execute('DELETE FROM sqlite_sequence WHERE name="material_requests"')
+            cursor.execute('INSERT INTO sqlite_sequence (name, seq) VALUES ("material_requests", 0)')
+            conn.commit()
+            conn.close()
+            logger.info("ID 재정렬: 전체 삭제 후 시퀀스 1부터 재시작")
+            return
         
         # ID를 1번부터 다시 삽입
         for i, row in enumerate(all_data, 1):
@@ -1338,17 +1343,13 @@ def reindex_material_request_ids():
         
         # SQLite의 AUTOINCREMENT 시퀀스 재설정
         cursor.execute('DELETE FROM sqlite_sequence WHERE name="material_requests"')
-        if all_data:
-            cursor.execute('INSERT INTO sqlite_sequence (name, seq) VALUES ("material_requests", ?)', (len(all_data),))
+        cursor.execute('INSERT INTO sqlite_sequence (name, seq) VALUES ("material_requests", ?)', (len(all_data),))
         
         conn.commit()
         conn.close()
         
         logger.info(f"ID 재정렬 완료: {len(all_data)}개 항목")
-        
-    except Exception as e:
-        logger.error(f"ID 재정렬 실패: {e}")
-        raise e
+
 
 @app.route('/admin/edit/<int:request_id>', methods=['POST'])
 def admin_edit_material_info(request_id):
@@ -1515,6 +1516,33 @@ self.addEventListener('message', function(event) {
 });
 '''
     return sw_content, 200, {'Content-Type': 'application/javascript'}
+
+# ====== DB 수동 업로드/다운로드 라우트 (무료, 관리자용) ======
+from flask import send_file
+
+@app.route('/admin/db-upload', methods=['GET', 'POST'])
+def db_upload():
+    """관리자: DB 파일 업로드 (OneDrive→서버)"""
+    if request.method == 'POST':
+        file = request.files['dbfile']
+        db_path = get_material_db_path()
+        file.save(db_path)
+        return '<h3>DB 업로드 완료! <a href="/">홈으로</a></h3>'
+    return '''
+        <h2>DB 파일 업로드</h2>
+        <form method="post" enctype="multipart/form-data">
+            <input type="file" name="dbfile" required>
+            <input type="submit" value="업로드">
+        </form>
+        <a href="/">← 홈으로</a>
+    '''
+
+@app.route('/admin/db-download')
+def db_download():
+    """관리자: DB 파일 다운로드 (서버→OneDrive)"""
+    db_path = get_material_db_path()
+    return send_file(db_path, as_attachment=True)
+
 
 if __name__ == '__main__':
     print("🚀 HPNT Manager V2.0 시작...")
