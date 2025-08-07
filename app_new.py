@@ -734,18 +734,51 @@ REQUESTS_TEMPLATE = '''
                         </div>
                         
                         <!-- 이미지 -->
-                        <div style="text-align: center;">
-                            {% if req[9] %}
-                                <div style="margin-bottom: 5px;">
-                                    <span class="badge badge-success">첨부됨</span>
+                        <div id="image_section_{{ req[0] }}" ondblclick="editImageInfo({{ req[0] }})" style="text-align: center; cursor: pointer;" title="더블클릭하여 이미지 수정">
+                            <div id="image_display_mode_{{ req[0] }}">
+                                {% if req[9] %}
+                                    <div style="margin-bottom: 5px;">
+                                        <span class="badge badge-success">첨부됨</span>
+                                    </div>
+                                    <a href="/images/{{ req[9] }}" target="_blank" 
+                                       style="display: inline-block; padding: 5px 10px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; font-size: 11px;">
+                                        🔍 보기
+                                    </a>
+                                {% else %}
+                                    <span style="color: #999; font-size: 12px;">이미지 없음</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div id="image_edit_mode_{{ req[0] }}" style="display: none; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <div style="margin-bottom: 8px;">
+                                    <label style="font-size: 12px; font-weight: bold; color: #333;">이미지 업로드:</label>
+                                    <input type="file" id="image_file_{{ req[0] }}" accept="image/*" 
+                                           style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 11px;">
                                 </div>
-                                <a href="/images/{{ req[9] }}" target="_blank" 
-                                   style="display: inline-block; padding: 5px 10px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; font-size: 11px;">
-                                    🔍 보기
-                                </a>
-                            {% else %}
-                                <span style="color: #999; font-size: 12px;">-</span>
-                            {% endif %}
+                                {% if req[9] %}
+                                <div style="margin-bottom: 8px;">
+                                    <img src="/images/{{ req[9] }}" alt="현재 이미지" 
+                                         style="max-width: 80px; max-height: 60px; border: 1px solid #ddd; border-radius: 3px;">
+                                    <div style="font-size: 10px; color: #666; margin-top: 2px;">현재 이미지</div>
+                                </div>
+                                {% endif %}
+                                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                    <button onclick="saveImageInfo({{ req[0] }})" 
+                                            style="padding: 4px 8px; background: #28a745; color: white; border: none; border-radius: 3px; font-size: 10px; cursor: pointer;">
+                                        💾 저장
+                                    </button>
+                                    {% if req[9] %}
+                                    <button onclick="deleteImageInfo({{ req[0] }})" 
+                                            style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 3px; font-size: 10px; cursor: pointer;">
+                                        🗑️ 삭제
+                                    </button>
+                                    {% endif %}
+                                    <button onclick="cancelEditImageInfo({{ req[0] }})" 
+                                            style="padding: 4px 8px; background: #6c757d; color: white; border: none; border-radius: 3px; font-size: 10px; cursor: pointer;">
+                                        취소
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- 긴급도 -->
@@ -945,6 +978,81 @@ REQUESTS_TEMPLATE = '''
                 console.error('Error:', error);
                 alert('❌ 수정 중 오류가 발생했습니다.');
             });
+        }
+        
+        // 이미지 인라인 편집 기능
+        function editImageInfo(requestId) {
+            document.getElementById(`image_display_mode_${requestId}`).style.display = 'none';
+            document.getElementById(`image_edit_mode_${requestId}`).style.display = 'block';
+        }
+        
+        function cancelEditImageInfo(requestId) {
+            document.getElementById(`image_display_mode_${requestId}`).style.display = 'block';
+            document.getElementById(`image_edit_mode_${requestId}`).style.display = 'none';
+        }
+        
+        function saveImageInfo(requestId) {
+            const fileInput = document.getElementById(`image_file_${requestId}`);
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('업로드할 이미지 파일을 선택해주세요.');
+                return;
+            }
+            
+            // 파일 크기 체크 (5MB 제한)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('이미지 파일 크기는 5MB 이하여야 합니다.');
+                return;
+            }
+            
+            // 이미지 파일 형식 체크
+            if (!file.type.startsWith('image/')) {
+                alert('이미지 파일만 업로드 가능합니다.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            fetch(`/admin/image/${requestId}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ 이미지가 성공적으로 업데이트되었습니다!');
+                    location.reload();
+                } else {
+                    alert('❌ 이미지 업데이트 실패: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ 이미지 업데이트 중 오류가 발생했습니다.');
+            });
+        }
+        
+        function deleteImageInfo(requestId) {
+            if (confirm('현재 이미지를 삭제하시겠습니까?')) {
+                fetch(`/admin/image/${requestId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ 이미지가 성공적으로 삭제되었습니다!');
+                        location.reload();
+                    } else {
+                        alert('❌ 이미지 삭제 실패: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 이미지 삭제 중 오류가 발생했습니다.');
+                });
+            }
         }
         
         function deleteRequest(requestId) {
@@ -1525,6 +1633,100 @@ def reindex_material_request_ids():
         raise e
 
 
+@app.route('/admin/image/<int:request_id>', methods=['POST', 'DELETE'])
+def admin_edit_image(request_id):
+    """관리자 이미지 업로드/삭제"""
+    try:
+        if request.method == 'POST':
+            # 이미지 업로드
+            if 'image' not in request.files:
+                return jsonify({'success': False, 'error': '이미지 파일이 없습니다.'}), 400
+            
+            file = request.files['image']
+            if file.filename == '':
+                return jsonify({'success': False, 'error': '파일이 선택되지 않았습니다.'}), 400
+            
+            # 파일 크기 체크 (5MB 제한)
+            file.seek(0, 2)  # 파일 끝으로 이동
+            file_size = file.tell()
+            file.seek(0)  # 파일 처음으로 되돌리기
+            
+            if file_size > 5 * 1024 * 1024:
+                return jsonify({'success': False, 'error': '파일 크기는 5MB 이하여야 합니다.'}), 400
+            
+            # 이미지 파일 형식 체크
+            if not file.content_type.startswith('image/'):
+                return jsonify({'success': False, 'error': '이미지 파일만 업로드 가능합니다.'}), 400
+            
+            # 기존 이미지 파일 삭제
+            db_path = get_material_db_path()
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT images FROM material_requests WHERE id = ?", (request_id,))
+            result = cursor.fetchone()
+            if result and result[0]:
+                old_image_path = os.path.join(get_images_dir_path(), result[0])
+                if os.path.exists(old_image_path):
+                    os.remove(old_image_path)
+                    logger.info(f"기존 이미지 삭제: {result[0]}")
+            
+            # 새 이미지 파일 저장
+            file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
+            filename = f"material_{request_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{file_extension}"
+            
+            images_dir = get_images_dir_path()
+            if not os.path.exists(images_dir):
+                os.makedirs(images_dir, exist_ok=True)
+            
+            file_path = os.path.join(images_dir, filename)
+            file.save(file_path)
+            
+            # DB 업데이트
+            cursor.execute("UPDATE material_requests SET images = ? WHERE id = ?", (filename, request_id))
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"이미지 업로드: ID {request_id} - {filename}")
+            return jsonify({'success': True, 'filename': filename})
+            
+        elif request.method == 'DELETE':
+            # 이미지 삭제
+            db_path = get_material_db_path()
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # 기존 이미지 파일명 조회
+            cursor.execute("SELECT images FROM material_requests WHERE id = ?", (request_id,))
+            result = cursor.fetchone()
+            
+            if not result:
+                conn.close()
+                return jsonify({'success': False, 'error': '요청을 찾을 수 없습니다.'}), 404
+            
+            image_filename = result[0]
+            if not image_filename:
+                conn.close()
+                return jsonify({'success': False, 'error': '삭제할 이미지가 없습니다.'}), 400
+            
+            # 이미지 파일 삭제
+            image_path = os.path.join(get_images_dir_path(), image_filename)
+            if os.path.exists(image_path):
+                os.remove(image_path)
+                logger.info(f"이미지 파일 삭제: {image_filename}")
+            
+            # DB에서 이미지 정보 제거
+            cursor.execute("UPDATE material_requests SET images = NULL WHERE id = ?", (request_id,))
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"이미지 삭제: ID {request_id}")
+            return jsonify({'success': True})
+            
+    except Exception as e:
+        logger.error(f"이미지 처리 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/admin/edit/<int:request_id>', methods=['POST'])
 def admin_edit_material_info(request_id):
     """관리자 자재정보 수정"""
@@ -1789,6 +1991,61 @@ def backup_create():
     except Exception as e:
         logger.error(f"DB 백업 생성 실패: {e}")
         return f'<h3>❌ DB 백업 생성 실패: {e}</h3><a href="/">홈으로</a>'
+
+@app.route('/admin/force-init-db')
+def force_init_db():
+    """관리자: Railway 환경 DB 강제 초기화"""
+    try:
+        # 환경 정보 출력
+        env = detect_environment()
+        is_railway = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RAILWAY_PROJECT_ID')
+        db_path = get_material_db_path()
+        
+        html_content = f'''
+        <h2>🚂 Railway DB 강제 초기화</h2>
+        <p><strong>환경:</strong> {env}</p>
+        <p><strong>Railway 감지:</strong> {bool(is_railway)}</p>
+        <p><strong>DB 경로:</strong> {db_path}</p>
+        <p><strong>DB 파일 존재:</strong> {os.path.exists(db_path)}</p>
+        
+        <h3>🔄 강제 초기화 실행:</h3>
+        '''
+        
+        # 강제 DB 초기화 실행
+        if init_material_database():
+            html_content += '<p style="color: green;">✅ DB 초기화 성공!</p>'
+            
+            # 데이터 확인
+            try:
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM material_requests")
+                count = cursor.fetchone()[0]
+                conn.close()
+                
+                html_content += f'<p><strong>현재 레코드 수:</strong> {count}개</p>'
+                
+                if count > 0:
+                    html_content += '<p style="color: green;">✅ 샘플 데이터 삽입 성공!</p>'
+                else:
+                    html_content += '<p style="color: red;">❌ 샘플 데이터 삽입 실패</p>'
+                    
+            except Exception as db_error:
+                html_content += f'<p style="color: red;">❌ DB 연결 오류: {db_error}</p>'
+        else:
+            html_content += '<p style="color: red;">❌ DB 초기화 실패!</p>'
+        
+        html_content += '''
+        <br>
+        <a href="/requests" class="btn">📋 자재요청 목록</a>
+        <a href="/" class="btn">← 홈으로</a>
+        '''
+        
+        return html_content
+        
+    except Exception as e:
+        logger.error(f"DB 강제 초기화 실패: {e}")
+        return f'<h3>❌ DB 강제 초기화 실패: {e}</h3><a href="/">홈으로</a>'
 
 @app.route('/admin/backup-test')
 def backup_test():
