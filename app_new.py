@@ -228,10 +228,14 @@ def init_material_database():
                 logger.info("✅ PostgreSQL 테이블 생성 완료")
                 
                 # 샘플 데이터 삽입
-                if insert_sample_data():
-                    logger.info("✅ PostgreSQL 샘플 데이터 삽입 완료")
-                else:
-                    logger.info("ℹ️ PostgreSQL 기존 데이터 존재")
+                try:
+                    from db_postgres import insert_sample_data
+                    if insert_sample_data():
+                        logger.info("✅ PostgreSQL 샘플 데이터 삽입 완료")
+                    else:
+                        logger.info("ℹ️ PostgreSQL 기존 데이터 존재")
+                except Exception as e:
+                    logger.error(f"샘플 데이터 삽입 중 오류: {e}")
                 
                 return True
             else:
