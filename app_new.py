@@ -716,19 +716,19 @@ REQUESTS_TEMPLATE = '''
                         <div id="material_info_{{ req[0] }}" ondblclick="editMaterialInfo({{ req[0] }})" style="cursor: pointer;" title="더블클릭하여 수정">
                             <div id="display_mode_{{ req[0] }}">
                                 <div style="font-weight: bold; font-size: 16px; color: #333; margin-bottom: 5px;">
-                                    🔧 <span id="item_name_display_{{ req[0] }}">{{ req[2] }}</span>
+                                    🔧 <span id="item_name_display_{{ req[0] }}">{{ req[1] }}</span>
                                 </div>
                                 <div style="color: #666; font-size: 13px; margin-bottom: 3px;">
-                                    📅 {{ req[1] }} | 📦 <span id="quantity_display_{{ req[0] }}">{{ req[4] }}</span>개
+                                    📅 {{ req[6] }} | 📦 <span id="quantity_display_{{ req[0] }}">{{ req[2] }}</span>개
                                 </div>
                                 {% if req[3] %}
                                 <div style="color: #666; font-size: 12px; margin-bottom: 3px;">
                                     📋 <span id="specifications_display_{{ req[0] }}">{{ req[3] }}</span>
                                 </div>
                                 {% endif %}
-                                {% if req[6] %}
+                                {% if req[4] %}
                                 <div style="color: #666; font-size: 12px;">
-                                    📝 <span id="reason_display_{{ req[0] }}">{{ req[6] }}</span>
+                                    📝 <span id="reason_display_{{ req[0] }}">{{ req[4] }}</span>
                                 </div>
                                 {% endif %}
                             </div>
@@ -736,12 +736,12 @@ REQUESTS_TEMPLATE = '''
                             <div id="edit_mode_{{ req[0] }}" style="display: none;">
                                 <div style="margin-bottom: 8px;">
                                     <label style="font-size: 12px; font-weight: bold; color: #333;">자재명:</label>
-                                    <input type="text" id="item_name_edit_{{ req[0] }}" value="{{ req[2] }}" 
+                                    <input type="text" id="item_name_edit_{{ req[0] }}" value="{{ req[1] }}" 
                                            style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px;">
                                 </div>
                                 <div style="margin-bottom: 8px;">
                                     <label style="font-size: 12px; font-weight: bold; color: #333;">수량:</label>
-                                    <input type="number" id="quantity_edit_{{ req[0] }}" value="{{ req[4] }}" min="1"
+                                    <input type="number" id="quantity_edit_{{ req[0] }}" value="{{ req[2] }}" min="1"
                                            style="width: 80px; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px;">
                                 </div>
                                 <div style="margin-bottom: 8px;">
@@ -752,7 +752,7 @@ REQUESTS_TEMPLATE = '''
                                 <div style="margin-bottom: 8px;">
                                     <label style="font-size: 12px; font-weight: bold; color: #333;">요청 사유:</label>
                                     <textarea id="reason_edit_{{ req[0] }}" 
-                                              style="width: 100%; height: 50px; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; resize: vertical;">{{ req[6] or '' }}</textarea>
+                                              style="width: 100%; height: 50px; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; resize: vertical;">{{ req[4] or '' }}</textarea>
                                 </div>
                                 <div style="display: flex; gap: 5px;">
                                     <button onclick="saveMaterialInfo({{ req[0] }})" 
