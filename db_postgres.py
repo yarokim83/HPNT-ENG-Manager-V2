@@ -342,3 +342,78 @@ def backup_to_json():
     except Exception as e:
         logger.error(f"JSON 백업 실패: {e}")
         return None
+
+def reindex_postgres_ids():
+    """PostgreSQL에서 ID 재정렬 (#1부터 순차적으로)"""
+    try:
+        conn = get_postgres_connection()
+        if not conn:
+            return False
+        
+        cursor = conn.cursor()
+        
+        # 모든 데이터를 created_at 순서로 조회
+        cursor.execute('''
+            SELECT id, item_name, quantity, specifications, reason, urgency, 
+                   request_date, vendor, status, images, created_at
+            FROM material_requests 
+            ORDER BY created_at ASC, id ASC
+        ''')
+        
+        all_data = cursor.fetchall()
+        
+        if not all_data:
+            cursor.close()
+            conn.close()
+            return True
+        
+        # 기존 테이블 백업 후 재생성
+        cursor.execute('DROP TABLE IF EXISTS material_requests_backup')
+        cursor.execute('''
+            CREATE TABLE material_requests_backup AS 
+            SELECT * FROM material_requests
+        ''')
+        
+        # 기존 테이블 삭제 후 재생성
+        cursor.execute('DROP TABLE material_requests')
+        cursor.execute('''
+            CREATE TABLE material_requests (
+                id SERIAL PRIMARY KEY,
+                item_name VARCHAR(200) NOT NULL,
+                quantity INTEGER NOT NULL DEFAULT 1,
+                specifications TEXT,
+                reason TEXT,
+                urgency VARCHAR(20) DEFAULT 'normal',
+                request_date DATE DEFAULT CURRENT_DATE,
+                vendor VARCHAR(100),
+                status VARCHAR(20) DEFAULT 'pending',
+                images VARCHAR(500),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # 데이터를 순서대로 다시 삽입 (ID는 자동으로 1부터 할당됨)
+        for i, row in enumerate(all_data, 1):
+            cursor.execute('''
+                INSERT INTO material_requests 
+                (item_name, quantity, specifications, reason, urgency, 
+                 request_date, vendor, status, images, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                row[1], row[2], row[3], row[4], row[5],  # item_name, quantity, specifications, reason, urgency
+                row[6], row[7], row[8], row[9], row[10]  # request_date, vendor, status, images, created_at
+            ))
+        
+        # 백업 테이블 삭제
+        cursor.execute('DROP TABLE material_requests_backup')
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        logger.info(f"PostgreSQL ID 재정렬 완료: {len(all_data)}개 항목")
+        return True
+        
+    except Exception as e:
+        logger.error(f"PostgreSQL ID 재정렬 실패: {e}")
+        return False

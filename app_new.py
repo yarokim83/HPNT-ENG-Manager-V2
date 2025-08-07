@@ -21,7 +21,7 @@ try:
         init_postgres_database, insert_sample_data, get_all_material_requests,
         add_material_request, update_material_request_status, delete_material_request,
         update_material_info, update_material_image, get_status_counts, backup_to_json,
-        get_postgres_connection
+        get_postgres_connection, reindex_postgres_ids
     )
     USE_POSTGRES = True
 except ImportError:
@@ -676,6 +676,9 @@ REQUESTS_TEMPLATE = '''
                             </a>
                             {% endif %}
                         </form>
+                        <button onclick="reindexIds()" class="btn btn-warning reindex-btn" style="padding: 8px 15px; margin-left: 10px;" title="모든 ID를 #1부터 순차적으로 재정렬">
+                            🔄 ID 재정렬
+                        </button>
                     </div>
                 </div>
                 
@@ -1398,6 +1401,40 @@ ADD_TEMPLATE = '''
             imagePasteArea.style.display = 'block';
         }
         
+        // ID 재정렬 기능
+        function reindexIds() {
+            if (confirm('현재 모든 자재요청의 ID를 #1부터 순차적으로 재정렬하시겠습니까?\n\n주의: 이 작업은 모든 데이터를 재구성하므로 시간이 걸릴 수 있습니다.')) {
+                const button = document.querySelector('.reindex-btn');
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = '재정렬 중...';
+                }
+                
+                fetch('/admin/reindex-ids', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        location.reload();
+                    } else {
+                        alert('❌ ID 재정렬 실패: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ ID 재정렬 중 오류가 발생했습니다.');
+                })
+                .finally(() => {
+                    if (button) {
+                        button.disabled = false;
+                        button.textContent = '🔄 ID 재정렬';
+                    }
+                });
+            }
+        }
+        
         // 이벤트 리스너 등록
         document.addEventListener('paste', handlePaste);
         imagePasteArea.addEventListener('click', function() {
@@ -2026,6 +2063,13 @@ def admin_delete_request(request_id):
             
             if not success:
                 return jsonify({'success': False, 'error': '요청을 찾을 수 없거나 삭제에 실패했습니다.'}), 404
+            
+            # PostgreSQL ID 재정렬 수행
+            reindex_success = reindex_postgres_ids()
+            if reindex_success:
+                logger.info("PostgreSQL ID 재정렬 완료")
+            else:
+                logger.warning("PostgreSQL ID 재정렬 실패")
         
         else:
             # SQLite 사용 (기존 로직)
@@ -2112,6 +2156,35 @@ self.addEventListener('message', function(event) {
 
 # ====== DB 수동 업로드/다운로드 라우트 (무료, 관리자용) ======
 from flask import send_file
+
+@app.route('/admin/reindex-ids', methods=['POST'])
+def admin_reindex_ids():
+    """관리자: ID 재정렬 (#1부터 순차적으로)"""
+    try:
+        if USE_POSTGRES:
+            # PostgreSQL ID 재정렬
+            success = reindex_postgres_ids()
+            if success:
+                return jsonify({
+                    'success': True, 
+                    'message': 'PostgreSQL ID 재정렬이 완료되었습니다. 페이지를 새로고침해주세요.'
+                })
+            else:
+                return jsonify({
+                    'success': False, 
+                    'error': 'PostgreSQL ID 재정렬에 실패했습니다.'
+                }), 500
+        else:
+            # SQLite ID 재정렬
+            reindex_material_request_ids()
+            return jsonify({
+                'success': True, 
+                'message': 'SQLite ID 재정렬이 완료되었습니다. 페이지를 새로고침해주세요.'
+            })
+        
+    except Exception as e:
+        logger.error(f"ID 재정렬 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/admin/db-upload', methods=['GET', 'POST'])
 def db_upload():
