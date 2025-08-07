@@ -7,7 +7,6 @@ iPad 및 크로스 플랫폼 지원
 
 import os
 import sys
-import sqlite3
 import json
 from datetime import datetime
 from pathlib import Path
@@ -15,6 +14,20 @@ from flask import Flask, render_template_string, request, jsonify, redirect, url
 from werkzeug.utils import secure_filename
 import logging
 import base64
+
+# PostgreSQL 데이터베이스 모듈 import
+try:
+    from db_postgres import (
+        init_postgres_database, insert_sample_data, get_all_material_requests,
+        add_material_request, update_material_request_status, delete_material_request,
+        update_material_info, update_material_image, get_status_counts, backup_to_json,
+        get_postgres_connection
+    )
+    USE_POSTGRES = True
+except ImportError:
+    # PostgreSQL 사용 불가시 SQLite 사용
+    import sqlite3
+    USE_POSTGRES = False
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -195,26 +208,46 @@ def restore_db_from_backup(backup_data):
         return False
 
 def init_material_database():
-    """자재관리 데이터베이스 초기화 - Railway/Render 환경 자동 복구 지원"""
-    db_path = get_material_db_path()
-    db_exists = os.path.exists(db_path)
-    
-    # Railway 환경 감지 및 로깅
+    """자재관리 데이터베이스 초기화 - PostgreSQL/SQLite 자동 선택"""
     env = detect_environment()
     is_railway = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RAILWAY_PROJECT_ID')
     
     logger.info(f"🚀 DB 초기화 시작 - 환경: {env}, Railway: {bool(is_railway)}")
-    logger.info(f"DB 경로: {db_path}")
-    logger.info(f"DB 파일 존재: {db_exists}")
+    logger.info(f"PostgreSQL 사용: {USE_POSTGRES}")
     
     try:
-        # 데이터베이스 디렉토리 생성
-        db_dir = os.path.dirname(db_path)
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir, exist_ok=True)
-            logger.info(f"📁 DB 디렉토리 생성: {db_dir}")
+        if USE_POSTGRES:
+            # PostgreSQL 초기화
+            logger.info("📊 PostgreSQL 데이터베이스 초기화 중...")
+            if init_postgres_database():
+                logger.info("✅ PostgreSQL 테이블 생성 완료")
+                
+                # 샘플 데이터 삽입
+                if insert_sample_data():
+                    logger.info("✅ PostgreSQL 샘플 데이터 삽입 완료")
+                else:
+                    logger.info("ℹ️ PostgreSQL 기존 데이터 존재")
+                
+                return True
+            else:
+                logger.error("❌ PostgreSQL 초기화 실패")
+                return False
         
-        conn = sqlite3.connect(db_path)
+        else:
+            # SQLite 초기화 (기존 로직)
+            db_path = get_material_db_path()
+            db_exists = os.path.exists(db_path)
+            
+            logger.info(f"DB 경로: {db_path}")
+            logger.info(f"DB 파일 존재: {db_exists}")
+            
+            # 데이터베이스 디렉토리 생성
+            db_dir = os.path.dirname(db_path)
+            if not os.path.exists(db_dir):
+                os.makedirs(db_dir, exist_ok=True)
+                logger.info(f"📁 DB 디렉토리 생성: {db_dir}")
+            
+            conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
         # 자재요청 테이블 생성
@@ -1418,41 +1451,65 @@ def home():
 @app.route('/requests')
 def requests_page():
     try:
-        db_path = get_material_db_path()
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
         status_filter = request.args.get('status', 'all')
         search_query = request.args.get('search', '')
         
-        # 상태별 카운트 계산
-        cursor.execute("""
-            SELECT status, COUNT(*) as count 
-            FROM material_requests 
-            GROUP BY status
-        """)
-        status_counts = dict(cursor.fetchall())
+        if USE_POSTGRES:
+            # PostgreSQL 사용
+            status_counts = get_status_counts()
+            total_count = sum(status_counts.values())
+            
+            # 모든 요청 조회 (필터링은 Python에서 처리)
+            all_requests = get_all_material_requests()
+            
+            # 상태 필터링
+            if status_filter != 'all':
+                requests = [req for req in all_requests if req[8] == status_filter]
+            else:
+                requests = all_requests
+            
+            # 검색 필터링
+            if search_query:
+                search_lower = search_query.lower()
+                requests = [
+                    req for req in requests 
+                    if (search_lower in str(req[1]).lower() or  # item_name
+                        search_lower in str(req[3] or '').lower() or  # specifications
+                        search_lower in str(req[4] or '').lower())  # reason
+                ]
         
-        # 전체 카운트
-        total_count = sum(status_counts.values())
-        
-        query = "SELECT * FROM material_requests WHERE 1=1"
-        params = []
-        
-        if status_filter != 'all':
-            query += " AND status = ?"
-            params.append(status_filter)
-        
-        if search_query:
-            query += " AND (item_name LIKE ? OR specifications LIKE ? OR reason LIKE ?)"
-            search_param = f"%{search_query}%"
-            params.extend([search_param, search_param, search_param])
-        
-        query += " ORDER BY id DESC"
-        
-        cursor.execute(query, params)
-        requests = cursor.fetchall()
-        conn.close()
+        else:
+            # SQLite 사용 (기존 로직)
+            db_path = get_material_db_path()
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # 상태별 카운트 계산
+            cursor.execute("""
+                SELECT status, COUNT(*) as count 
+                FROM material_requests 
+                GROUP BY status
+            """)
+            status_counts = dict(cursor.fetchall())
+            total_count = sum(status_counts.values())
+            
+            query = "SELECT * FROM material_requests WHERE 1=1"
+            params = []
+            
+            if status_filter != 'all':
+                query += " AND status = ?"
+                params.append(status_filter)
+            
+            if search_query:
+                query += " AND (item_name LIKE ? OR specifications LIKE ? OR reason LIKE ?)"
+                search_param = f"%{search_query}%"
+                params.extend([search_param, search_param, search_param])
+            
+            query += " ORDER BY id DESC"
+            
+            cursor.execute(query, params)
+            requests = cursor.fetchall()
+            conn.close()
         
         return render_template_string(REQUESTS_TEMPLATE, 
                                     requests=requests,
@@ -1512,19 +1569,36 @@ def add_page():
                     # 이미지 저장 실패해도 요청 등록은 계속 진행
                     image_filename = None
             
-            db_path = get_material_db_path()
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
+            # 데이터베이스에 자재요청 추가
+            if USE_POSTGRES:
+                # PostgreSQL 사용
+                success = add_material_request(
+                    item_name=item_name,
+                    quantity=quantity,
+                    specifications=specifications,
+                    reason=reason,
+                    urgency=urgency,
+                    images=image_filename
+                )
+                
+                if not success:
+                    raise Exception("PostgreSQL 데이터 삽입 실패")
             
-            # DB 테이블 구조에 맞게 INSERT (이미지 파일명 포함)
-            cursor.execute('''
-                INSERT INTO material_requests 
-                (request_date, item_name, specifications, quantity, urgency, reason, vendor, status, images)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-            ''', (datetime.now().strftime('%Y-%m-%d'), item_name, specifications, quantity, urgency, reason, vendor, image_filename))
-            
-            conn.commit()
-            conn.close()
+            else:
+                # SQLite 사용 (기존 로직)
+                db_path = get_material_db_path()
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                
+                # DB 테이블 구조에 맞게 INSERT (이미지 파일명 포함)
+                cursor.execute('''
+                    INSERT INTO material_requests 
+                    (request_date, item_name, specifications, quantity, urgency, reason, vendor, status, images)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+                ''', (datetime.now().strftime('%Y-%m-%d'), item_name, specifications, quantity, urgency, reason, vendor, image_filename))
+                
+                conn.commit()
+                conn.close()
             
             logger.info(f"새 자재요청 등록: {item_name} x {quantity} (이미지: {'있음' if image_filename else '없음'})")
             return redirect('/requests')
@@ -1561,22 +1635,31 @@ def admin_update_request(request_id):
         status = data.get('status', 'pending')
         is_active = data.get('is_active', False)
         
-        db_path = get_material_db_path()
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        if USE_POSTGRES:
+            # PostgreSQL 사용
+            success = update_material_request_status(request_id, status, vendor)
+            
+            if not success:
+                return jsonify({'success': False, 'error': '요청을 찾을 수 없거나 업데이트에 실패했습니다.'}), 404
         
-        # 자재요청 업데이트
-        cursor.execute(
-            "UPDATE material_requests SET vendor = ?, status = ? WHERE id = ?", 
-            (vendor, status, request_id)
-        )
-        
-        if cursor.rowcount == 0:
+        else:
+            # SQLite 사용 (기존 로직)
+            db_path = get_material_db_path()
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # 자재요청 업데이트
+            cursor.execute(
+                "UPDATE material_requests SET vendor = ?, status = ? WHERE id = ?", 
+                (vendor, status, request_id)
+            )
+            
+            if cursor.rowcount == 0:
+                conn.close()
+                return jsonify({'success': False, 'error': '요청을 찾을 수 없습니다.'}), 404
+            
+            conn.commit()
             conn.close()
-            return jsonify({'success': False, 'error': '요청을 찾을 수 없습니다.'}), 404
-        
-        conn.commit()
-        conn.close()
         
         logger.info(f"관리자 업데이트: 요청 ID {request_id}, 업체: {vendor}, 상태: {status}")
         return jsonify({'success': True})
@@ -1658,18 +1741,34 @@ def admin_edit_image(request_id):
             if not file.content_type.startswith('image/'):
                 return jsonify({'success': False, 'error': '이미지 파일만 업로드 가능합니다.'}), 400
             
-            # 기존 이미지 파일 삭제
-            db_path = get_material_db_path()
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            
-            cursor.execute("SELECT images FROM material_requests WHERE id = ?", (request_id,))
-            result = cursor.fetchone()
-            if result and result[0]:
-                old_image_path = os.path.join(get_images_dir_path(), result[0])
-                if os.path.exists(old_image_path):
-                    os.remove(old_image_path)
-                    logger.info(f"기존 이미지 삭제: {result[0]}")
+            # 기존 이미지 파일 삭제 및 새 이미지 저장
+            if USE_POSTGRES:
+                # PostgreSQL에서 기존 이미지 정보 조회
+                conn = get_postgres_connection()
+                if conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT images FROM material_requests WHERE id = %s", (request_id,))
+                    result = cursor.fetchone()
+                    if result and result[0]:
+                        old_image_path = os.path.join(get_images_dir_path(), result[0])
+                        if os.path.exists(old_image_path):
+                            os.remove(old_image_path)
+                            logger.info(f"기존 이미지 삭제: {result[0]}")
+                    cursor.close()
+                    conn.close()
+            else:
+                # SQLite에서 기존 이미지 정보 조회
+                db_path = get_material_db_path()
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("SELECT images FROM material_requests WHERE id = ?", (request_id,))
+                result = cursor.fetchone()
+                if result and result[0]:
+                    old_image_path = os.path.join(get_images_dir_path(), result[0])
+                    if os.path.exists(old_image_path):
+                        os.remove(old_image_path)
+                        logger.info(f"기존 이미지 삭제: {result[0]}")
+                conn.close()
             
             # 새 이미지 파일 저장
             file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
@@ -1683,30 +1782,61 @@ def admin_edit_image(request_id):
             file.save(file_path)
             
             # DB 업데이트
-            cursor.execute("UPDATE material_requests SET images = ? WHERE id = ?", (filename, request_id))
-            conn.commit()
-            conn.close()
+            if USE_POSTGRES:
+                success = update_material_image(request_id, filename)
+                if not success:
+                    raise Exception("PostgreSQL 이미지 업데이트 실패")
+            else:
+                db_path = get_material_db_path()
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("UPDATE material_requests SET images = ? WHERE id = ?", (filename, request_id))
+                conn.commit()
+                conn.close()
             
             logger.info(f"이미지 업로드: ID {request_id} - {filename}")
             return jsonify({'success': True, 'filename': filename})
             
         elif request.method == 'DELETE':
             # 이미지 삭제
-            db_path = get_material_db_path()
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
+            image_filename = None
             
-            # 기존 이미지 파일명 조회
-            cursor.execute("SELECT images FROM material_requests WHERE id = ?", (request_id,))
-            result = cursor.fetchone()
-            
-            if not result:
+            if USE_POSTGRES:
+                # PostgreSQL에서 이미지 정보 조회
+                conn = get_postgres_connection()
+                if not conn:
+                    return jsonify({'success': False, 'error': '데이터베이스 연결 실패'}), 500
+                
+                cursor = conn.cursor()
+                cursor.execute("SELECT images FROM material_requests WHERE id = %s", (request_id,))
+                result = cursor.fetchone()
+                
+                if not result:
+                    cursor.close()
+                    conn.close()
+                    return jsonify({'success': False, 'error': '요청을 찾을 수 없습니다.'}), 404
+                
+                image_filename = result[0]
+                cursor.close()
                 conn.close()
-                return jsonify({'success': False, 'error': '요청을 찾을 수 없습니다.'}), 404
+                
+            else:
+                # SQLite에서 이미지 정보 조회
+                db_path = get_material_db_path()
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                
+                cursor.execute("SELECT images FROM material_requests WHERE id = ?", (request_id,))
+                result = cursor.fetchone()
+                
+                if not result:
+                    conn.close()
+                    return jsonify({'success': False, 'error': '요청을 찾을 수 없습니다.'}), 404
+                
+                image_filename = result[0]
+                conn.close()
             
-            image_filename = result[0]
             if not image_filename:
-                conn.close()
                 return jsonify({'success': False, 'error': '삭제할 이미지가 없습니다.'}), 400
             
             # 이미지 파일 삭제
@@ -1716,9 +1846,17 @@ def admin_edit_image(request_id):
                 logger.info(f"이미지 파일 삭제: {image_filename}")
             
             # DB에서 이미지 정보 제거
-            cursor.execute("UPDATE material_requests SET images = NULL WHERE id = ?", (request_id,))
-            conn.commit()
-            conn.close()
+            if USE_POSTGRES:
+                success = update_material_image(request_id, None)
+                if not success:
+                    return jsonify({'success': False, 'error': 'PostgreSQL 이미지 삭제 실패'}), 500
+            else:
+                db_path = get_material_db_path()
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("UPDATE material_requests SET images = NULL WHERE id = ?", (request_id,))
+                conn.commit()
+                conn.close()
             
             logger.info(f"이미지 삭제: ID {request_id}")
             return jsonify({'success': True})
@@ -1744,23 +1882,32 @@ def admin_edit_material_info(request_id):
         if quantity < 1:
             return jsonify({'success': False, 'error': '수량은 1 이상이어야 합니다.'}), 400
         
-        db_path = get_material_db_path()
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
         # 자재정보 업데이트
-        cursor.execute("""
-            UPDATE material_requests 
-            SET item_name = ?, quantity = ?, specifications = ?, reason = ?
-            WHERE id = ?
-        """, (item_name, quantity, specifications, reason, request_id))
+        if USE_POSTGRES:
+            # PostgreSQL 사용
+            success = update_material_info(request_id, item_name, quantity, specifications, reason)
+            
+            if not success:
+                return jsonify({'success': False, 'error': '수정할 요청을 찾을 수 없거나 업데이트에 실패했습니다.'}), 404
         
-        if cursor.rowcount == 0:
+        else:
+            # SQLite 사용 (기존 로직)
+            db_path = get_material_db_path()
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                UPDATE material_requests 
+                SET item_name = ?, quantity = ?, specifications = ?, reason = ?
+                WHERE id = ?
+            """, (item_name, quantity, specifications, reason, request_id))
+            
+            if cursor.rowcount == 0:
+                conn.close()
+                return jsonify({'success': False, 'error': '수정할 요청을 찾을 수 없습니다.'}), 404
+            
+            conn.commit()
             conn.close()
-            return jsonify({'success': False, 'error': '수정할 요청을 찾을 수 없습니다.'}), 404
-        
-        conn.commit()
-        conn.close()
         
         logger.info(f"자재정보 수정: ID {request_id} - {item_name} x {quantity}")
         return jsonify({'success': True})
@@ -1773,36 +1920,76 @@ def admin_edit_material_info(request_id):
 def admin_copy_request(request_id):
     """관리자 자재요청 복사"""
     try:
-        db_path = get_material_db_path()
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        # 기존 자재요청 정보 조회
-        cursor.execute("""
-            SELECT item_name, specifications, quantity, urgency, reason, images
-            FROM material_requests WHERE id = ?
-        """, (request_id,))
-        result = cursor.fetchone()
-        
-        if not result:
+        if USE_POSTGRES:
+            # PostgreSQL에서 기존 요청 정보 조회
+            conn = get_postgres_connection()
+            if not conn:
+                return jsonify({'success': False, 'error': '데이터베이스 연결 실패'}), 500
+            
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT item_name, specifications, quantity, urgency, reason, images
+                FROM material_requests WHERE id = %s
+            """, (request_id,))
+            result = cursor.fetchone()
+            
+            if not result:
+                cursor.close()
+                conn.close()
+                return jsonify({'success': False, 'error': '복사할 요청을 찾을 수 없습니다.'}), 404
+            
+            item_name, specifications, quantity, urgency, reason, images = result
+            cursor.close()
             conn.close()
-            return jsonify({'success': False, 'error': '복사할 요청을 찾을 수 없습니다.'}), 404
+            
+            # PostgreSQL 함수로 새 요청 추가
+            success = add_material_request(
+                item_name=item_name,
+                quantity=quantity,
+                specifications=specifications,
+                reason=reason,
+                urgency=urgency,
+                images=images
+            )
+            
+            if not success:
+                return jsonify({'success': False, 'error': 'PostgreSQL 복사 실패'}), 500
+            
+            logger.info(f"자재요청 복사: ID {request_id} ({item_name})")
+            return jsonify({'success': True})
         
-        item_name, specifications, quantity, urgency, reason, images = result
-        
-        # 새로운 자재요청으로 등록 (상태는 pending, 발주업체는 비움)
-        cursor.execute("""
-            INSERT INTO material_requests 
-            (request_date, item_name, specifications, quantity, urgency, reason, vendor, status, images)
-            VALUES (?, ?, ?, ?, ?, ?, '', 'pending', ?)
-        """, (datetime.now().strftime('%Y-%m-%d'), item_name, specifications, quantity, urgency, reason, images))
-        
-        new_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
-        
-        logger.info(f"자재요청 복사: ID {request_id} → 새 ID {new_id} ({item_name})")
-        return jsonify({'success': True, 'new_id': new_id})
+        else:
+            # SQLite 사용 (기존 로직)
+            db_path = get_material_db_path()
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # 기존 자재요청 정보 조회
+            cursor.execute("""
+                SELECT item_name, specifications, quantity, urgency, reason, images
+                FROM material_requests WHERE id = ?
+            """, (request_id,))
+            result = cursor.fetchone()
+            
+            if not result:
+                conn.close()
+                return jsonify({'success': False, 'error': '복사할 요청을 찾을 수 없습니다.'}), 404
+            
+            item_name, specifications, quantity, urgency, reason, images = result
+            
+            # 새로운 자재요청으로 등록 (상태는 pending, 발주업체는 비움)
+            cursor.execute("""
+                INSERT INTO material_requests 
+                (request_date, item_name, specifications, quantity, urgency, reason, vendor, status, images)
+                VALUES (?, ?, ?, ?, ?, ?, '', 'pending', ?)
+            """, (datetime.now().strftime('%Y-%m-%d'), item_name, specifications, quantity, urgency, reason, images))
+            
+            new_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"자재요청 복사: ID {request_id} → 새 ID {new_id} ({item_name})")
+            return jsonify({'success': True, 'new_id': new_id})
         
     except Exception as e:
         logger.error(f"자재요청 복사 실패: {e}")
@@ -1810,29 +1997,50 @@ def admin_copy_request(request_id):
 
 @app.route('/admin/delete/<int:request_id>', methods=['DELETE'])
 def admin_delete_request(request_id):
-    """관리자 자재요청 삭제 및 ID 재정렬"""
+    """관리자 자재요청 삭제"""
     try:
-        db_path = get_material_db_path()
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        image_filename = None
         
-        # 이미지 파일명 조회 (삭제를 위해)
-        cursor.execute("SELECT images FROM material_requests WHERE id = ?", (request_id,))
-        result = cursor.fetchone()
-        image_filename = result[0] if result and result[0] else None
+        if USE_POSTGRES:
+            # PostgreSQL에서 이미지 정보 조회 후 삭제
+            conn = get_postgres_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT images FROM material_requests WHERE id = %s", (request_id,))
+                result = cursor.fetchone()
+                image_filename = result[0] if result and result[0] else None
+                cursor.close()
+                conn.close()
+            
+            # PostgreSQL 함수로 삭제
+            success = delete_material_request(request_id)
+            
+            if not success:
+                return jsonify({'success': False, 'error': '요청을 찾을 수 없거나 삭제에 실패했습니다.'}), 404
         
-        # 자재요청 삭제
-        cursor.execute("DELETE FROM material_requests WHERE id = ?", (request_id,))
-        
-        if cursor.rowcount == 0:
+        else:
+            # SQLite 사용 (기존 로직)
+            db_path = get_material_db_path()
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # 이미지 파일명 조회 (삭제를 위해)
+            cursor.execute("SELECT images FROM material_requests WHERE id = ?", (request_id,))
+            result = cursor.fetchone()
+            image_filename = result[0] if result and result[0] else None
+            
+            # 자재요청 삭제
+            cursor.execute("DELETE FROM material_requests WHERE id = ?", (request_id,))
+            
+            if cursor.rowcount == 0:
+                conn.close()
+                return jsonify({'success': False, 'error': '요청을 찾을 수 없습니다.'}), 404
+            
+            conn.commit()
             conn.close()
-            return jsonify({'success': False, 'error': '요청을 찾을 수 없습니다.'}), 404
-        
-        conn.commit()
-        conn.close()
-        
-        # ID 재정렬 수행
-        reindex_material_request_ids()
+            
+            # SQLite에서만 ID 재정렬 수행
+            reindex_material_request_ids()
         
         # 이미지 파일도 삭제 (OneDrive 연동)
         if image_filename:
