@@ -1986,56 +1986,7 @@ def admin_edit_image(request_id):
         logger.error(f"이미지 처리 실패: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/admin/edit/<int:request_id>', methods=['POST'])
-def admin_edit_material_info(request_id):
-    """관리자 자재정보 수정"""
-    try:
-        data = request.get_json()
-        item_name = data.get('item_name', '').strip()
-        quantity = data.get('quantity', 1)
-        specifications = data.get('specifications', '').strip()
-        reason = data.get('reason', '').strip()
-        
-        # 입력 값 검증
-        if not item_name:
-            return jsonify({'success': False, 'error': '자재명은 필수 입력 항목입니다.'}), 400
-        
-        if quantity < 1:
-            return jsonify({'success': False, 'error': '수량은 1 이상이어야 합니다.'}), 400
-        
-        # 자재정보 업데이트
-        if USE_POSTGRES:
-            # PostgreSQL 사용
-            success = update_material_info(request_id, item_name, quantity, specifications, reason)
-            
-            if not success:
-                return jsonify({'success': False, 'error': '수정할 요청을 찾을 수 없거나 업데이트에 실패했습니다.'}), 404
-        
-        else:
-            # SQLite 사용 (기존 로직)
-            db_path = get_material_db_path()
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                UPDATE material_requests 
-                SET item_name = ?, quantity = ?, specifications = ?, reason = ?
-                WHERE id = ?
-            """, (item_name, quantity, specifications, reason, request_id))
-            
-            if cursor.rowcount == 0:
-                conn.close()
-                return jsonify({'success': False, 'error': '수정할 요청을 찾을 수 없습니다.'}), 404
-            
-            conn.commit()
-            conn.close()
-        
-        logger.info(f"자재정보 수정: ID {request_id} - {item_name} x {quantity}")
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        logger.error(f"자재정보 수정 실패: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# 중복된 admin_edit_material_info 라우트 제거됨 (다른 위치에 이미 정의되어 있음)
 
 @app.route('/admin/copy/<int:request_id>', methods=['POST'])
 def admin_copy_request(request_id):
