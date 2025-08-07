@@ -2188,6 +2188,12 @@ def admin_delete_request(request_id):
         logger.error(f"관리자 삭제 실패: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# Railway 헬스체크용 라우트
+@app.route('/health')
+def health_check():
+    """Railway 헬스체크용 간단한 응답"""
+    return {'status': 'healthy', 'message': 'HPNT ENG Manager V2.0 is running'}, 200
+
 # PWA 서비스 워커 비활성화 (캐시 문제 해결)
 @app.route('/sw.js')
 def service_worker():
@@ -2452,50 +2458,56 @@ def backup_test():
 
 
 if __name__ == '__main__':
-    print("=" * 50)
-    print("🚀 HPNT ENG Manager V2.0 시작")
-    print("=" * 50)
+    try:
+        print("=" * 50)
+        print("🚀 HPNT ENG Manager V2.0 시작")
+        print("=" * 50)
 
-    # 실행 환경 정보 출력
-    env = detect_environment()
-    print(f"실행 환경: {env}")
-
-    # DB 초기화
-    if init_material_database():
-        db_path = get_material_db_path()
-        print(f"DB 경로: {db_path}")
-        print("DB 초기화 완료")
-    else:
-        print("⚠️ DB 초기화 실패")
-
-    # Railway 환경에서는 PORT 환경 변수 사용
-    port = int(os.environ.get('PORT', 5001))
-    host = '0.0.0.0'  # Railway에서는 모든 인터페이스에서 수신해야 함
-    
-    print(f"서버 시작: {host}:{port}")
-    print("=" * 50)
-    
-    # Flask 앱 실행
-    app.run(
-        host=host,
-        port=port,
-        debug=False  # 프로덕션 환경에서는 debug=False
-    )
-    env = detect_environment()
-    print(f"📱 실행 환경: {env}")
-    
-    # DB 초기화
-    if init_material_database():
-        db_path = get_material_db_path()
-        print(f"📊 DB 경로: {db_path}")
+        # 실행 환경 정보 출력
+        env = detect_environment()
+        print(f"실행 환경: {env}")
         
-        # 포트 설정 (충돌 방지를 위해 5001 사용)
+        # Railway 환경에서 DATABASE_URL 확인
+        if env == 'Railway':
+            database_url = os.environ.get('DATABASE_URL')
+            if database_url:
+                print("✅ DATABASE_URL 환경 변수 확인됨")
+            else:
+                print("⚠️ DATABASE_URL 환경 변수 누락 - PostgreSQL 연결 불가")
+
+        # DB 초기화 (실패해도 서버 시작)
+        try:
+            if init_material_database():
+                if USE_POSTGRES:
+                    print("✅ PostgreSQL DB 초기화 완료")
+                else:
+                    db_path = get_material_db_path()
+                    print(f"✅ SQLite DB 초기화 완료: {db_path}")
+            else:
+                print("⚠️ DB 초기화 실패 - 서버는 계속 시작")
+        except Exception as db_error:
+            print(f"⚠️ DB 초기화 오류: {db_error} - 서버는 계속 시작")
+
+        # 포트 설정
         port = int(os.environ.get('PORT', 5001))
-        host = '0.0.0.0' if is_cloud_env() else '127.0.0.1'
+        host = '0.0.0.0'  # Railway에서는 모든 인터페이스에서 수신해야 함
         
-        print(f"🌐 서버 시작: http://{host}:{port}")
-        print("✨ V2.0 경량화 완료!")
+        print(f"🌐 서버 시작: {host}:{port}")
+        print(f"🟢 헬스체크: /health")
+        print("=" * 50)
         
-        app.run(host=host, port=port, debug=not is_cloud_env())
-    else:
-        print("❌ DB 초기화 실패로 서버를 시작할 수 없습니다.")
+        # Flask 앱 실행
+        app.run(
+            host=host,
+            port=port,
+            debug=False  # 프로덕션 환경에서는 debug=False
+        )
+        
+    except Exception as startup_error:
+        print(f"❌ 서버 시작 실패: {startup_error}")
+        import traceback
+        traceback.print_exc()
+        # Railway에서 오류 로그를 볼 수 있도록 잠시 대기
+        import time
+        time.sleep(5)
+        raise
