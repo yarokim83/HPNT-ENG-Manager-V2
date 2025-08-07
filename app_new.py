@@ -1698,6 +1698,55 @@ def serve_image(filename):
         logger.error(f"이미지 서빙 실패: {e}")
         return "Image not found", 404
 
+@app.route('/admin/edit/<int:request_id>', methods=['POST'])
+def admin_edit_material_info(request_id):
+    """관리자 자재 정보 수정 (모달 인라인 편집)"""
+    try:
+        data = request.get_json()
+        item_name = data.get('item_name', '').strip()
+        quantity = data.get('quantity', 1)
+        specifications = data.get('specifications', '').strip()
+        reason = data.get('reason', '').strip()
+        
+        # 필수 필드 검증
+        if not item_name:
+            return jsonify({'success': False, 'error': '자재명은 필수 입력 항목입니다.'}), 400
+        
+        if quantity < 1:
+            return jsonify({'success': False, 'error': '수량은 1 이상이어야 합니다.'}), 400
+        
+        if USE_POSTGRES:
+            # PostgreSQL 사용
+            success = update_material_info(request_id, item_name, quantity, specifications, reason)
+            
+            if not success:
+                return jsonify({'success': False, 'error': '데이터베이스 업데이트 실패'}), 500
+        else:
+            # SQLite 사용
+            db_path = get_material_db_path()
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                UPDATE material_requests 
+                SET item_name = ?, quantity = ?, specifications = ?, reason = ?
+                WHERE id = ?
+            """, (item_name, quantity, specifications, reason, request_id))
+            
+            if cursor.rowcount == 0:
+                conn.close()
+                return jsonify({'success': False, 'error': '요청을 찾을 수 없습니다.'}), 404
+            
+            conn.commit()
+            conn.close()
+        
+        logger.info(f"자재 정보 수정: 요청 ID {request_id}, 자재명: {item_name}, 수량: {quantity}")
+        return jsonify({'success': True, 'message': '자재 정보가 성공적으로 수정되었습니다.'})
+        
+    except Exception as e:
+        logger.error(f"자재 정보 수정 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/admin/update/<int:request_id>', methods=['POST'])
 def admin_update_request(request_id):
     """관리자 자재요청 업데이트"""
