@@ -15,19 +15,19 @@ from werkzeug.utils import secure_filename
 import logging
 import base64
 
-# PostgreSQL 데이터베이스 모듈 import
-try:
-    from db_postgres import (
-        init_postgres_database, insert_sample_data, get_all_material_requests,
-        add_material_request, update_material_request_status, delete_material_request,
-        update_material_info, update_material_image, get_status_counts, backup_to_json,
-        get_postgres_connection, reindex_postgres_ids
-    )
-    USE_POSTGRES = True
-except ImportError:
+# PostgreSQL 데이터베이스 모듈 import (테스트를 위해 임시 비활성화)
+# try:
+#     from db_postgres import (
+#         init_postgres_database, insert_sample_data, get_all_material_requests,
+#         add_material_request, update_material_request_status, delete_material_request,
+#         update_material_info, update_material_image, get_status_counts, backup_to_json,
+#         get_postgres_connection, reindex_postgres_ids
+#     )
+#     USE_POSTGRES = True
+# except ImportError:
     # PostgreSQL 사용 불가시 SQLite 사용
-    import sqlite3
-    USE_POSTGRES = False
+import sqlite3
+USE_POSTGRES = False  # 테스트를 위해 SQLite 강제 사용
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -1565,7 +1565,8 @@ def requests_page():
             status_counts = dict(cursor.fetchall())
             total_count = sum(status_counts.values())
             
-            query = "SELECT * FROM material_requests WHERE 1=1"
+            # PostgreSQL과 동일한 컴럼 순서로 명시적 SELECT
+            query = "SELECT id, item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images, created_at FROM material_requests WHERE 1=1"
             params = []
             
             if status_filter != 'all':
