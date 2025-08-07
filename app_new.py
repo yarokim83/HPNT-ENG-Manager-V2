@@ -1122,25 +1122,26 @@ REQUESTS_TEMPLATE = '''
         
         // ID 재정렬 기능
         function reindexIds() {
-            if (confirm('모든 자재요청 ID를 #1부터 순차적으로 재정렬하시겠습니까?\n\n⚠️ 주의: 이 작업은 되돌릴 수 없습니다.')) {
+            var confirmMsg = '모든 자재요청 ID를 #1부터 순차적으로 재정렬하시겠습니까?' + String.fromCharCode(10) + String.fromCharCode(10) + '주의: 이 작업은 되돌릴 수 없습니다.';
+            if (confirm(confirmMsg)) {
                 fetch('/admin/reindex-ids', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     }
                 })
-                .then(response => response.json())
-                .then(data => {
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
                     if (data.success) {
-                        alert('✅ ' + data.message);
-                        location.reload(); // 페이지 새로고침
+                        alert('성공: ' + data.message);
+                        location.reload();
                     } else {
-                        alert('❌ ID 재정렬 실패: ' + data.error);
+                        alert('실패: ID 재정렬 실패 - ' + data.error);
                     }
                 })
-                .catch(error => {
+                .catch(function(error) {
                     console.error('Error:', error);
-                    alert('❌ ID 재정렬 중 오류가 발생했습니다.');
+                    alert('오류: ID 재정렬 중 오류가 발생했습니다.');
                 });
             }
         }
