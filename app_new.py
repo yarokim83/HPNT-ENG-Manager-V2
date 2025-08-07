@@ -676,6 +676,7 @@ REQUESTS_TEMPLATE = '''
                             </a>
                             {% endif %}
                         </form>
+                        <!-- RAILWAY DEBUG: {{ total_count }} requests loaded -->
                         <button onclick="reindexIds()" class="btn btn-warning reindex-btn" style="padding: 8px 15px; margin-left: 10px;" title="모든 ID를 #1부터 순차적으로 재정렬">
                             🔄 ID 재정렬
                         </button>
@@ -1119,6 +1120,30 @@ REQUESTS_TEMPLATE = '''
             }
         }
         
+        // ID 재정렬 기능
+        function reindexIds() {
+            if (confirm('모든 자재요청 ID를 #1부터 순차적으로 재정렬하시겠습니까?\n\n⚠️ 주의: 이 작업은 되돌릴 수 없습니다.')) {
+                fetch('/admin/reindex-ids', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        location.reload(); // 페이지 새로고침
+                    } else {
+                        alert('❌ ID 재정렬 실패: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ ID 재정렬 중 오류가 발생했습니다.');
+                });
+            }
+        }
 
     </script>
 </body>
