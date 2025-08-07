@@ -211,9 +211,14 @@ def init_material_database():
     """자재관리 데이터베이스 초기화 - PostgreSQL/SQLite 자동 선택"""
     env = detect_environment()
     is_railway = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RAILWAY_PROJECT_ID')
+    database_url = os.environ.get('DATABASE_URL')
     
     logger.info(f"🚀 DB 초기화 시작 - 환경: {env}, Railway: {bool(is_railway)}")
     logger.info(f"PostgreSQL 사용: {USE_POSTGRES}")
+    logger.info(f"DATABASE_URL 존재: {bool(database_url)}")
+    if database_url:
+        # URL의 앞부분만 로그에 출력 (보안상 전체 URL은 출력하지 않음)
+        logger.info(f"DATABASE_URL 시작: {database_url[:20]}...")
     
     try:
         if USE_POSTGRES:
