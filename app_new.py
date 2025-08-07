@@ -257,28 +257,28 @@ def init_material_database():
                 logger.info(f"📁 DB 디렉토리 생성: {db_dir}")
             
             conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        # 자재요청 테이블 생성
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS material_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            request_date TEXT NOT NULL,
-            item_name TEXT NOT NULL,
-            specifications TEXT,
-            quantity INTEGER NOT NULL,
-            urgency TEXT NOT NULL DEFAULT 'normal',
-            reason TEXT,
-            vendor TEXT,
-            status TEXT DEFAULT 'pending',
-            images TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        ''')
-        
-        # 🔥 Railway/Render 환경에서 DB 파일이 새로 생성된 경우 다단계 자동 복구 시도
-        if (is_cloud_env() or is_railway) and not db_exists:
-            logger.warning(f"🚨 {env} 환경에서 DB 파일이 없어 새로 생성됨 - 다단계 자동 복구 시도")
+            cursor = conn.cursor()
+            
+            # 자재요청 테이블 생성 (PostgreSQL 스키마와 일치)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS material_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_name TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                specifications TEXT,
+                reason TEXT,
+                urgency TEXT NOT NULL DEFAULT 'normal',
+                request_date TEXT NOT NULL,
+                vendor TEXT,
+                status TEXT DEFAULT 'pending',
+                images TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            ''')
+            
+            # 🔥 Railway/Render 환경에서 DB 파일이 새로 생성된 경우 다단계 자동 복구 시도
+            if (is_cloud_env() or is_railway) and not db_exists:
+                logger.warning(f"🚨 {env} 환경에서 DB 파일이 없어 새로 생성됨 - 다단계 자동 복구 시도")
             
             recovery_success = False
             
@@ -312,14 +312,14 @@ def init_material_database():
             if 'insert_sample_data' in locals() and insert_sample_data:
                 logger.info("📝 샘플 데이터 자동 삽입 시작")
                 sample_data = [
-                    ('2025-01-06', '안전모', '흰색, CE 인증', 10, 'high', '현장 안전 강화를 위해 필요', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                    ('2025-01-06', '작업장갑', '면장갑, L사이즈', 20, 'normal', '작업자 보호용', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                    ('2025-01-05', '전선', '2.5sq, 100m', 3, 'normal', '전기 배선 작업용', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                    ('안전모', 10, '흰색, CE 인증', '현장 안전 강화를 위해 필요', 'high', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                    ('작업장갑', 20, '면장갑, L사이즈', '작업자 보호용', 'normal', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                    ('전선', 3, '2.5sq, 100m', '전기 배선 작업용', 'normal', '2025-01-05', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                 ]
                 
                 cursor.executemany('''
                     INSERT INTO material_requests 
-                    (request_date, item_name, specifications, quantity, urgency, reason, vendor, status, images, created_at)
+                    (item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', sample_data)
                 
@@ -334,16 +334,16 @@ def init_material_database():
             if record_count == 0:
                 logger.info("🚂 Railway 환경 - 빈 DB 감지, 샘플 데이터 강제 삽입")
                 sample_data = [
-                    ('2025-08-06', '🚂 Railway 테스트', 'Railway 배포 테스트용', 1, 'high', 'Railway 환경 DB 테스트', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                    ('2025-08-06', '안전모', '흰색, CE 인증', 10, 'normal', '현장 안전용', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                    ('2025-08-06', '작업장갑', '면장갑, L사이즈', 20, 'normal', '작업자 보호용', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                    ('🚂 Railway 테스트', 1, 'Railway 배포 테스트용', 'Railway 환경 DB 테스트', 'high', '2025-08-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                    ('안전모', 10, '흰색, CE 인증', '현장 안전용', 'normal', '2025-08-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                    ('작업장갑', 20, '면장갑, L사이즈', '작업자 보호용', 'normal', '2025-08-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                 ]
                 
                 cursor.executemany('''
                     INSERT INTO material_requests 
-                    (request_date, item_name, specifications, quantity, urgency, reason, vendor, status, images, created_at)
+                    (item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', sample_data)
+                    ''', sample_data)
                 
                 logger.info(f"✅ Railway 환경 샘플 데이터 {len(sample_data)}개 강제 삽입 완료")
         
@@ -1662,12 +1662,12 @@ def add_page():
                 conn = sqlite3.connect(db_path)
                 cursor = conn.cursor()
                 
-                # DB 테이블 구조에 맞게 INSERT (이미지 파일명 포함)
+                # DB 테이블 구조에 맞게 INSERT (새 스키마 컴럼 순서)
                 cursor.execute('''
                     INSERT INTO material_requests 
-                    (request_date, item_name, specifications, quantity, urgency, reason, vendor, status, images)
+                    (item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images)
                     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-                ''', (datetime.now().strftime('%Y-%m-%d'), item_name, specifications, quantity, urgency, reason, vendor, image_filename))
+                ''', (item_name, quantity, specifications, reason, urgency, datetime.now().strftime('%Y-%m-%d'), vendor, image_filename))
                 
                 conn.commit()
                 conn.close()
@@ -2049,12 +2049,12 @@ def admin_copy_request(request_id):
             
             item_name, specifications, quantity, urgency, reason, images = result
             
-            # 새로운 자재요청으로 등록 (상태는 pending, 발주업체는 비움)
+            # 새로운 자재요청으로 등록 (상태는 pending, 발주업체는 비움) - 새 스키마 컴럼 순서
             cursor.execute("""
                 INSERT INTO material_requests 
-                (request_date, item_name, specifications, quantity, urgency, reason, vendor, status, images)
+                (item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images)
                 VALUES (?, ?, ?, ?, ?, ?, '', 'pending', ?)
-            """, (datetime.now().strftime('%Y-%m-%d'), item_name, specifications, quantity, urgency, reason, images))
+            """, (item_name, quantity, specifications, reason, urgency, datetime.now().strftime('%Y-%m-%d'), images))
             
             new_id = cursor.lastrowid
             conn.commit()
