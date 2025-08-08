@@ -1,0 +1,249 @@
+/* === 모던 반응형 UI/UX 디자인 === */
+
+/* === 상태별 현황 대시보드 === */
+.status-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.status-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    border-left: 4px solid;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.status-card:hover {
+    transform: translateY(-2px);
+}
+
+/* === 자재요청 목록 === */
+.requests-list {
+    display: block;
+}
+
+.request-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: box-shadow 0.2s ease;
+}
+
+.request-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+/* === PC 그리드 레이아웃 (768px 이상) === */
+@media (min-width: 768px) {
+    .card-content {
+        display: grid;
+        grid-template-columns: 60px 2fr 140px 100px 80px 140px 140px 100px;
+        gap: 12px;
+        align-items: center;
+    }
+    
+    .requests-header {
+        display: grid;
+        grid-template-columns: 60px 2fr 140px 100px 80px 140px 140px 100px;
+        gap: 12px;
+        align-items: center;
+        background: #f8f9fa;
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-weight: 600;
+        color: #495057;
+    }
+}
+
+/* === 모바일 스택 레이아웃 (767px 이하) === */
+@media (max-width: 767px) {
+    .container {
+        padding: 16px;
+    }
+    
+    .requests-header {
+        display: none;
+    }
+    
+    .card-content {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .card-section {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+    
+    .section-label {
+        font-weight: 600;
+        font-size: 12px;
+        color: #667eea;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .header .btn {
+        width: 100%;
+        margin: 4px 0;
+    }
+    
+    .status-dashboard {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+}
+
+/* === 작은 모바일 (480px 이하) === */
+@media (max-width: 480px) {
+    .status-dashboard {
+        grid-template-columns: 1fr;
+    }
+    
+    .container {
+        padding: 12px;
+    }
+    
+    .request-card {
+        padding: 16px;
+    }
+}
+
+/* === 편집 모드 === */
+.edit-mode {
+    background: #fff3cd !important;
+    border: 2px solid #ffc107 !important;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 12px 0;
+}
+
+.edit-mode input,
+.edit-mode textarea,
+.edit-mode select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.edit-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.edit-buttons button {
+    flex: 1;
+    min-width: 80px;
+}
+
+/* === 검색 영역 === */
+.search-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 12px;
+}
+
+@media (max-width: 767px) {
+    .search-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-container form {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .search-container input {
+        width: 100%;
+    }
+}
+
+/* === 이미지 최적화 === */
+.image-section img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+@media (min-width: 768px) {
+    .image-section img {
+        max-width: 80px;
+        max-height: 60px;
+    }
+}
+
+/* === 반응형 텍스트 === */
+.material-info h4 {
+    font-size: 16px;
+    margin-bottom: 4px;
+    color: #333;
+}
+
+.material-info p {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+/* === 액션 버튼 그룹 === */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .action-buttons button {
+        width: 100%;
+    }
+}
+
+/* === 강제 테마 오버라이드 (외부 CSS 적용 확인용) === */
+body {
+    background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%) !important;
+}
+
+.container {
+    background: rgba(255,255,255,0.96) !important;
+    border-radius: 16px !important;
+}
+
+.header h1 {
+    font-size: 40px !important;
+    letter-spacing: -0.5px;
+}
+
+.btn {
+    border-radius: 12px !important;
+}
+
+.status-card {
+    border-left-width: 6px !important;
+}

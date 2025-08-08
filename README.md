@@ -28,17 +28,63 @@ iPad 및 크로스 플랫폼 환경에서 최적화된 성능을 제공합니다
 pip install -r requirements.txt
 
 # 2. 앱 실행
-python app.py
+python app_new.py
 
 # 3. 브라우저에서 접속
-# http://127.0.0.1:5000
+# http://127.0.0.1:5001
 ```
 
 ### iPad에서 실행
 ```bash
 # a-Shell 또는 Pythonista 3에서
-python3 app.py
+python3 app_new.py
 ```
+
+## 🧪 테스트 데이터베이스
+
+### 전체 DB 초기화 (권장)
+```bash
+# Python 스크립트로 전체 초기화 (로컬 + OneDrive)
+python init_all_test_db.py
+
+# 또는 배치 파일 사용 (Windows)
+init_all_test_db.bat
+```
+
+### 개별 DB 초기화
+```bash
+# 로컬 DB만 초기화
+python init_test_db.py
+
+# OneDrive DB만 초기화
+python init_onedrive_test_db.py
+
+# 또는 개별 배치 파일 사용 (Windows)
+init_test_db.bat
+```
+
+### 테스트 DB 확인
+```bash
+# 데이터베이스 내용 확인
+python check_test_db.py
+```
+
+### 테스트 데이터 구성
+- **총 13개의 샘플 데이터**
+- **다양한 상태**: pending(7), approved(3), rejected(1), in_progress(1), completed(1)
+- **다양한 긴급도**: normal(7), low(3), high(3)
+- **테스트용 데이터**: 3개
+- **실제 자재 데이터**: 10개
+
+### 테스트 데이터 예시
+- 🔧 테스트 자재 1 (긴급)
+- 📦 테스트 자재 2 (승인됨)
+- ⚡ 테스트 자재 3 (긴급)
+- 안전모, 작업장갑, 전선, 볼트, 너트 등
+
+### 데이터베이스 위치
+- **로컬**: `db/material_rq.db`
+- **OneDrive**: `~/OneDrive/HPNT_Manager/db/material_rq.db`
 
 ## 📱 iPad 설치 가이드
 
@@ -46,7 +92,7 @@ python3 app.py
 1. App Store에서 "a-Shell" 설치
 2. 터미널에서 `pip install flask` 실행
 3. 프로젝트 파일을 iCloud Drive로 복사
-4. `python3 app.py` 실행
+4. `python3 app_new.py` 실행
 
 ### 방법 2: Pythonista 3 ($9.99)
 1. App Store에서 "Pythonista 3" 구매
@@ -110,10 +156,20 @@ DELETE /api/requests/:id # 요청 삭제
 ## 📂 프로젝트 구조
 ```
 HPNT_ENG_ManagerV2.0/
-├── app.py              # 메인 애플리케이션
+├── app_new.py           # 메인 애플리케이션 (V2.0)
+├── app.py              # 기존 애플리케이션
+├── init_all_test_db.py # 전체 테스트 DB 초기화 스크립트
+├── init_test_db.py     # 로컬 테스트 DB 초기화 스크립트
+├── init_onedrive_test_db.py # OneDrive 테스트 DB 초기화 스크립트
+├── check_test_db.py    # 테스트 DB 확인 스크립트
+├── init_all_test_db.bat # 전체 테스트 DB 초기화 배치 파일
+├── init_test_db.bat    # 로컬 테스트 DB 초기화 배치 파일
 ├── requirements.txt    # Python 의존성
 ├── README.md          # 프로젝트 문서
-└── material_rq.db     # SQLite 데이터베이스 (자동 생성)
+├── db/
+│   ├── material_rq.db # SQLite 데이터베이스
+│   └── images/        # 업로드된 이미지
+└── static/            # 정적 파일
 ```
 
 ## 🎨 UI/UX 특징
@@ -142,6 +198,7 @@ HPNT_ENG_ManagerV2.0/
 - [x] 기본 Flask 앱 구조
 - [x] iCloud Drive 연동
 - [x] PWA 기본 기능
+- [x] 테스트 데이터베이스
 - [ ] 자재요청 CRUD
 
 ### Phase 2: 고급 기능

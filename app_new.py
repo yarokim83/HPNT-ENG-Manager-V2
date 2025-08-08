@@ -49,6 +49,10 @@ def after_request(response):
 # 버전 정보 (캐시 무효화용)
 APP_VERSION = datetime.now().strftime('%Y%m%d_%H%M%S')
 
+def get_app_version():
+    """앱 버전 반환 (캐시 무효화용)"""
+    return APP_VERSION
+
 # 환경 감지
 def detect_environment():
     """실행 환경 감지"""
@@ -1515,7 +1519,8 @@ def home():
         return render_template_string(HOME_TEMPLATE, 
                                     environment=env,
                                     db_location=db_location,
-                                    version=APP_VERSION)
+                                    version=APP_VERSION,
+                                    get_app_version=get_app_version)
     except Exception as e:
         logger.error(f"홈페이지 로드 실패: {e}")
         return f"<h1>❌ 오류</h1><p>페이지를 불러올 수 없습니다: {e}</p>"
@@ -1589,7 +1594,8 @@ def requests_page():
                                     status_filter=status_filter,
                                     search_query=search_query,
                                     status_counts=status_counts,
-                                    total_count=total_count)
+                                    total_count=total_count,
+                                    get_app_version=get_app_version)
     except Exception as e:
         logger.error(f"자재요청 목록 조회 실패: {e}")
         return f"<h1>❌ 오류</h1><p>목록을 불러올 수 없습니다: {e}</p><a href='/'>← 홈으로</a>"
@@ -1608,10 +1614,10 @@ def add_page():
             image_data = request.form.get('image_data', '').strip()
             
             if not item_name:
-                return render_template_string(ADD_TEMPLATE, error="자재명은 필수 입력 항목입니다.")
+                return render_template_string(ADD_TEMPLATE, error="자재명은 필수 입력 항목입니다.", get_app_version=get_app_version)
             
             if quantity <= 0:
-                return render_template_string(ADD_TEMPLATE, error="수량은 1 이상이어야 합니다.")
+                return render_template_string(ADD_TEMPLATE, error="수량은 1 이상이어야 합니다.", get_app_version=get_app_version)
             
             # 이미지 처리
             image_filename = None
@@ -1677,12 +1683,12 @@ def add_page():
             return redirect('/requests')
             
         except ValueError:
-            return render_template_string(ADD_TEMPLATE, error="수량은 숫자로 입력해주세요.")
+            return render_template_string(ADD_TEMPLATE, error="수량은 숫자로 입력해주세요.", get_app_version=get_app_version)
         except Exception as e:
             logger.error(f"자재요청 등록 실패: {e}")
-            return render_template_string(ADD_TEMPLATE, error=f"등록 중 오류가 발생했습니다: {e}")
+            return render_template_string(ADD_TEMPLATE, error=f"등록 중 오류가 발생했습니다: {e}", get_app_version=get_app_version)
     
-    return render_template_string(ADD_TEMPLATE)
+    return render_template_string(ADD_TEMPLATE, get_app_version=get_app_version)
 
 @app.route('/stats')
 def stats_page():

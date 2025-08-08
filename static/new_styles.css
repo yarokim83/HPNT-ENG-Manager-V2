@@ -1,0 +1,18 @@
+/* HPNT Manager V2.0 - Responsive Styles (placeholder)
+   This file exists to allow cache-busted loads via ?v=<version> and to host future overrides.
+   Keep main layout in template until full extraction. */
+
+:root {
+  --primary: #667eea;
+  --secondary: #764ba2;
+}
+
+/* Small safe overrides only; avoid fighting inline styles */
+.btn { transition: transform .06s ease-in-out; }
+.btn:active { transform: scale(0.98); }
+
+/* Mobile tweaks */
+@media (max-width: 768px) {
+  .status-dashboard { gap: 10px !important; }
+  .table-scroll { overflow-x: auto; }
+}
