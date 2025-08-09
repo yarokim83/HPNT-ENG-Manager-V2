@@ -374,6 +374,7 @@ HOME_TEMPLATE = '''
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>🚀 HPNT Manager V2.0</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="HPNT Manager">
     <meta name="theme-color" content="#007AFF">
@@ -775,6 +776,24 @@ HOME_TEMPLATE = '''
     </div>
     
     <script>
+        // Prevent inline handler ReferenceError by ensuring global binding after DOM ready
+        (function(){
+            if (typeof window.copyRequest === 'undefined') {
+                window.copyRequest = function(){ console.warn('copyRequest not ready'); };
+            }
+            if (typeof window.updateRequest === 'undefined') {
+                window.updateRequest = function(){ console.warn('updateRequest not ready'); };
+            }
+            if (typeof window.deleteRequest === 'undefined') {
+                window.deleteRequest = function(){ console.warn('deleteRequest not ready'); };
+            }
+            if (typeof window.onPickImage === 'undefined') {
+                window.onPickImage = function(){ console.warn('onPickImage not ready'); };
+            }
+            if (typeof window.deleteImage === 'undefined') {
+                window.deleteImage = function(){ console.warn('deleteImage not ready'); };
+            }
+        })();
         // PWA 등록
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
@@ -880,6 +899,7 @@ REQUESTS_TEMPLATE = '''
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>📋 자재요청 목록 - HPNT Manager V2.0</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="HPNT Manager">
     <meta name="theme-color" content="#007AFF">
@@ -1581,7 +1601,7 @@ REQUESTS_TEMPLATE = '''
                             <img src="/images/{{ req[9] }}" class="request-image-thumb" alt="이미지">
                         </a>
                         <div class="request-actions" style="margin-top: 8px;">
-                            <button onclick="deleteImage({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">이미지 삭제</button>
+                            <button type="button" onclick="deleteImage({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">이미지 삭제</button>
                         </div>
                         {% else %}
                         <div class="detail-item">🖼️ 이미지 없음</div>
@@ -1592,14 +1612,14 @@ REQUESTS_TEMPLATE = '''
                     </div>
 
                     <div class="request-actions">
-                     <button onclick="updateRequest({{ req[0] }})" class="ios-button ios-button-success ios-haptic">
+                     <button type="button" onclick="updateRequest({{ req[0] }})" class="ios-button ios-button-success ios-haptic">
                          저장
                      </button>
                         
-                        <button onclick="copyRequest({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">
+                        <button type="button" onclick="copyRequest({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">
                             복사
                         </button>
-                        <button onclick="deleteRequest({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">
+                        <button type="button" onclick="deleteRequest({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">
                             삭제
                         </button>
                     </div>
@@ -1636,7 +1656,7 @@ REQUESTS_TEMPLATE = '''
         // Copy Request Function
         function copyRequest(requestId) {
             if (confirm('이 요청을 복사하시겠습니까?')) {
-                fetch(`/admin/copy/${requestId}`, {
+                fetch('/admin/copy/' + requestId, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1660,9 +1680,9 @@ REQUESTS_TEMPLATE = '''
         
         // Update Vendor/Status Inline
         function updateRequest(requestId) {
-            const vendor = document.getElementById(`vendor-${requestId}`).value;
-            const status = document.getElementById(`status-${requestId}`).value;
-            fetch(`/admin/update/${requestId}`, {
+            const vendor = document.getElementById('vendor-' + requestId).value;
+            const status = document.getElementById('status-' + requestId).value;
+            fetch('/admin/update/' + requestId, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ vendor, status })
@@ -1692,7 +1712,7 @@ REQUESTS_TEMPLATE = '''
         function uploadImage(requestId, file) {
             const formData = new FormData();
             formData.append('image', file);
-            fetch(`/admin/image/${requestId}`, { method: 'POST', body: formData })
+            fetch('/admin/image/' + requestId, { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(d => {
                     if (d.success) {
@@ -1710,7 +1730,7 @@ REQUESTS_TEMPLATE = '''
 
         function deleteImage(requestId) {
             if (!confirm('이미지를 삭제하시겠습니까?')) return;
-            fetch(`/admin/image/${requestId}`, { method: 'DELETE' })
+            fetch('/admin/image/' + requestId, { method: 'DELETE' })
                 .then(r => r.json())
                 .then(d => {
                     if (d.success) {
@@ -1729,7 +1749,7 @@ REQUESTS_TEMPLATE = '''
         // Delete Request Function
         function deleteRequest(requestId) {
             if (confirm('이 요청을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
-                fetch(`/admin/delete/${requestId}`, {
+                fetch('/admin/delete/' + requestId, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1750,6 +1770,13 @@ REQUESTS_TEMPLATE = '''
                 });
             }
         }
+
+        // Expose functions to global scope for inline handlers
+        window.copyRequest = copyRequest;
+        window.updateRequest = updateRequest;
+        window.deleteRequest = deleteRequest;
+        window.onPickImage = onPickImage;
+        window.deleteImage = deleteImage;
         
         // Page Load Animation
         document.addEventListener('DOMContentLoaded', function() {
