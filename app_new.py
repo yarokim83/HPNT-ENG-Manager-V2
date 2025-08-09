@@ -372,7 +372,7 @@ HOME_TEMPLATE = '''
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>🚀 HPNT Manager V2.0</title>
+    <title>HPNT Manager V2.0</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -713,8 +713,7 @@ HOME_TEMPLATE = '''
     <div class="glass-container ios-fade-in">
         <!-- Navigation Header -->
         <div class="ios-nav">
-            <h1 class="ios-nav-title">🚀 HPNT Manager</h1>
-            <p class="ios-nav-subtitle">💎 자재관리 시스템</p>
+            <h1 class="ios-nav-title">HPNT Manager</h1>
         </div>
         
         <!-- Main Content -->
@@ -749,24 +748,12 @@ HOME_TEMPLATE = '''
                     📋 자재요청 목록
                 </a>
                 
-                <a href="/add?v={{ version }}" class="ios-button ios-button-success ios-haptic">
-                    ➕ 새 요청 추가
-                </a>
-                
                 <a href="/stats?v={{ version }}" class="ios-button ios-button-glass ios-haptic">
                     📊 상세 통계
                 </a>
             </div>
 
-            <!-- Environment Info -->
-            <div class="ios-card ios-haptic" style="margin-top: 24px; text-align: left;">
-                <div class="ios-card-title">🔧 시스템 정보</div>
-                <div style="font-size: var(--font-size-sm); color: rgba(0,0,0,0.6); margin-top: 8px;">
-                    <div>환경: <span id="environment">로딩 중...</span></div>
-                    <div>데이터베이스: <span id="database">로딩 중...</span></div>
-                    <div>버전: <span id="appVersion">{{ version }}</span></div>
-                </div>
-            </div>
+            
 
             <!-- Refresh Button -->
             <button onclick="refreshData()" class="ios-button ios-button-glass ios-haptic" style="margin-top: 16px;">
@@ -876,7 +863,7 @@ HOME_TEMPLATE = '''
             
             // 다이나믹 아일랜드 초기 메시지
             setTimeout(() => {
-                showDynamicIsland('🚀 HPNT Manager V2.0');
+                showDynamicIsland('HPNT Manager V2.0');
             }, 500);
         });
 
