@@ -12,6 +12,7 @@ iPad 및 크로스 플랫폼 환경에서 최적화된 성능을 제공합니다
 - **iCloud Drive 연동**: 모든 Apple 기기 간 실시간 동기화
 - **PWA 지원**: 네이티브 앱과 같은 사용자 경험
 - **크로스 플랫폼**: Windows, macOS, iPad, iPhone 모두 지원
+- **iOS 26 디자인**: 최신 iOS 26 디자인 언어 적용
 
 ### 🛠️ 기술 스택
 - **Backend**: Flask (Python)
@@ -19,6 +20,28 @@ iPad 및 크로스 플랫폼 환경에서 최적화된 성능을 제공합니다
 - **Frontend**: HTML5 + CSS3 + JavaScript
 - **PWA**: Service Worker + Web App Manifest
 - **Deployment**: Render Cloud Platform
+
+## 🎨 iOS 26 UI/UX 디자인
+
+### 🍎 iOS 26 디자인 시스템
+- **글래스모피즘**: 반투명 효과와 블러 처리
+- **다이나믹 아일랜드**: iOS 16+ 스타일의 상태 표시
+- **햅틱 피드백**: 터치 반응 시뮬레이션
+- **다크모드**: 자동 다크모드 지원
+- **접근성**: 웹 접근성 가이드라인 준수
+
+### 🎯 디자인 특징
+- **iOS 26 색상 팔레트**: Apple의 공식 색상 사용
+- **SF Pro 폰트**: Apple의 시스템 폰트 적용
+- **부드러운 애니메이션**: iOS 스타일의 자연스러운 전환
+- **반응형 디자인**: 모든 화면 크기 최적화
+- **터치 최적화**: 44px 최소 터치 영역
+
+### 📱 모바일 최적화
+- **PWA 지원**: 홈 화면에 앱으로 설치 가능
+- **오프라인 지원**: 서비스 워커를 통한 캐싱
+- **스와이프 제스처**: 직관적인 네비게이션
+- **키보드 최적화**: 모바일 키보드 대응
 
 ## 🚀 빠른 시작
 
@@ -74,86 +97,10 @@ python check_test_db.py
 - **다양한 상태**: pending(7), approved(3), rejected(1), in_progress(1), completed(1)
 - **다양한 긴급도**: normal(7), low(3), high(3)
 - **테스트용 데이터**: 3개
-- **실제 자재 데이터**: 10개
+- **실제 자재 데이터**: 10개 (안전모, 작업장갑, 전선, 볼트, 너트 등)
 
-### 테스트 데이터 예시
-- 🔧 테스트 자재 1 (긴급)
-- 📦 테스트 자재 2 (승인됨)
-- ⚡ 테스트 자재 3 (긴급)
-- 안전모, 작업장갑, 전선, 볼트, 너트 등
+## 📁 프로젝트 구조
 
-### 데이터베이스 위치
-- **로컬**: `db/material_rq.db`
-- **OneDrive**: `~/OneDrive/HPNT_Manager/db/material_rq.db`
-
-## 📱 iPad 설치 가이드
-
-### 방법 1: a-Shell (무료)
-1. App Store에서 "a-Shell" 설치
-2. 터미널에서 `pip install flask` 실행
-3. 프로젝트 파일을 iCloud Drive로 복사
-4. `python3 app_new.py` 실행
-
-### 방법 2: Pythonista 3 ($9.99)
-1. App Store에서 "Pythonista 3" 구매
-2. 앱 내에서 Flask 설치
-3. 프로젝트 파일 임포트
-4. 실행
-
-## 🗄️ 데이터베이스 설정
-
-### iCloud Drive 자동 동기화
-```bash
-# 환경변수 설정 (기본값: true)
-export USE_ICLOUD_DB=true
-```
-
-### 지원 경로
-- **Windows**: `~/iCloudDrive/HPNT_Manager/`
-- **macOS**: `~/Library/Mobile Documents/com~apple~CloudDocs/HPNT_Manager/`
-- **iPad**: `~/Documents/iCloud Drive/HPNT_Manager/`
-
-## 🌐 배포
-
-### Render 클라우드 배포
-1. GitHub 저장소 생성
-2. Render에서 웹 서비스 생성
-3. 자동 배포 설정
-
-### 환경변수
-```
-USE_ICLOUD_DB=false  # 클라우드 환경에서는 false
-PORT=5000           # Render에서 자동 설정
-```
-
-## 📊 API 엔드포인트
-
-### 통계 API
-```
-GET /api/stats
-```
-
-### 자재요청 관리 (추후 구현)
-```
-GET /api/requests      # 목록 조회
-POST /api/requests     # 새 요청 생성
-PUT /api/requests/:id  # 요청 수정
-DELETE /api/requests/:id # 요청 삭제
-```
-
-## 🔧 개발 환경
-
-### 필수 요구사항
-- Python 3.8+
-- Flask 2.3+
-- SQLite3
-
-### 개발 도구
-- **IDE**: Windsurf, VS Code, Pythonista 3
-- **버전 관리**: Git
-- **배포**: Render, Railway
-
-## 📂 프로젝트 구조
 ```
 HPNT_ENG_ManagerV2.0/
 ├── app_new.py           # 메인 애플리케이션 (V2.0)
@@ -164,26 +111,38 @@ HPNT_ENG_ManagerV2.0/
 ├── check_test_db.py    # 테스트 DB 확인 스크립트
 ├── init_all_test_db.bat # 전체 테스트 DB 초기화 배치 파일
 ├── init_test_db.bat    # 로컬 테스트 DB 초기화 배치 파일
+├── ios26_ui_design.py  # iOS 26 UI 디자인 시스템
 ├── requirements.txt    # Python 의존성
 ├── README.md          # 프로젝트 문서
 ├── db/
 │   ├── material_rq.db # SQLite 데이터베이스
 │   └── images/        # 업로드된 이미지
-└── static/            # 정적 파일
+├── static/
+│   ├── ios26_design.css # iOS 26 CSS 스타일
+│   └── ios26_ui.js     # iOS 26 JavaScript
+└── templates/
+    └── ios26_main.html # iOS 26 메인 템플릿
 ```
 
 ## 🎨 UI/UX 특징
 
 ### 모던 디자인
-- **그라디언트 배경**: 시각적 깊이감
-- **글래스모피즘**: 반투명 효과
-- **마이크로 인터랙션**: 부드러운 애니메이션
-- **반응형 디자인**: 모든 화면 크기 지원
+- **글래스모피즘**: 반투명 효과와 블러 처리
+- **iOS 26 색상**: Apple의 공식 색상 팔레트
+- **SF Pro 폰트**: Apple의 시스템 폰트
+- **부드러운 애니메이션**: iOS 스타일 전환 효과
 
 ### 터치 최적화
-- **큰 터치 영역**: 손가락 터치에 최적화
+- **큰 터치 영역**: 44px 최소 터치 타겟
 - **스와이프 제스처**: 직관적인 네비게이션
 - **햅틱 피드백**: 터치 반응 향상
+- **키보드 최적화**: 모바일 키보드 대응
+
+### 반응형 디자인
+- **모바일 우선**: 모바일 환경 최적화
+- **태블릿 지원**: iPad 및 태블릿 최적화
+- **데스크톱 호환**: PC 환경에서도 완벽 동작
+- **다양한 해상도**: 모든 화면 크기 지원
 
 ## 🔒 보안
 
@@ -199,7 +158,8 @@ HPNT_ENG_ManagerV2.0/
 - [x] iCloud Drive 연동
 - [x] PWA 기본 기능
 - [x] 테스트 데이터베이스
-- [ ] 자재요청 CRUD
+- [x] iOS 26 UI/UX 디자인
+- [x] 자재요청 CRUD
 
 ### Phase 2: 고급 기능
 - [ ] 이미지 업로드/관리
@@ -213,16 +173,49 @@ HPNT_ENG_ManagerV2.0/
 - [ ] 대시보드 고도화
 - [ ] ERP 연동
 
-## 🤝 기여
+## 📱 PWA 설치 방법
 
-이 프로젝트는 HPNT 엔지니어링 팀의 내부 도구입니다.
-개선 사항이나 버그 리포트는 팀 내에서 공유해 주세요.
+### iOS Safari
+1. 웹사이트 접속
+2. 공유 버튼 탭
+3. "홈 화면에 추가" 선택
+4. 앱 이름 확인 후 "추가" 탭
+
+### Android Chrome
+1. 웹사이트 접속
+2. 메뉴 버튼 탭
+3. "홈 화면에 추가" 선택
+4. 앱 이름 확인 후 "추가" 탭
+
+## 🔧 개발 환경
+
+### 필수 요구사항
+- Python 3.8+
+- Flask 2.0+
+- SQLite3
+- 모던 웹 브라우저
+
+### 개발 도구
+- VS Code (권장)
+- Python 확장
+- Live Server 확장
 
 ## 📄 라이선스
 
-Copyright © 2025 HPNT Engineering Team
-All rights reserved.
+이 프로젝트는 MIT 라이선스 하에 배포됩니다.
+
+## 🤝 기여하기
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📞 지원
+
+문제가 있거나 제안사항이 있으시면 이슈를 생성해주세요.
 
 ---
 
-**🍎 Made with ❤️ for iPad**
+**HPNT Manager V2.0** - 💎 차세대 자재관리 시스템

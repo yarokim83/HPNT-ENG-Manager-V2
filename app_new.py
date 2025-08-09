@@ -371,71 +371,503 @@ HOME_TEMPLATE = '''
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>HPNT ENG Manager V2.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>🚀 HPNT Manager V2.0</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HPNT Manager">
+    <meta name="theme-color" content="#007AFF">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="version" content="{{ version }}">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        /* === iOS 26 Design System === */
+        :root {
+            --ios-blue: #007AFF;
+            --ios-purple: #5856D6;
+            --ios-green: #34C759;
+            --ios-orange: #FF9500;
+            --ios-red: #FF3B30;
+            --ios-light-blue: #5AC8FA;
+            --ios-dark: #1C1C1E;
+            --ios-light: #F2F2F7;
+            --ios-white: #FFFFFF;
+            --ios-black: #000000;
+            
+            --glass-light: rgba(255,255,255,0.25);
+            --glass-dark: rgba(0,0,0,0.25);
+            --glass-blur: blur(20px);
+            --shadow-small: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow-medium: 0 4px 16px rgba(0,0,0,0.15);
+            --shadow-large: 0 8px 32px rgba(0,0,0,0.2);
+            --shadow-glass: 0 8px 32px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2);
+            --radius-small: 8px;
+            --radius-medium: 16px;
+            --radius-large: 24px;
+            --radius-xl: 32px;
+            --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+            --font-size-xs: 12px;
+            --font-size-sm: 14px;
+            --font-size-base: 16px;
+            --font-size-lg: 18px;
+            --font-size-xl: 20px;
+            --font-size-2xl: 24px;
+            --font-size-3xl: 30px;
+            --font-size-4xl: 36px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: var(--font-family);
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden;
+            color: var(--ios-dark);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        .container { 
-            max-width: 800px; 
-            margin: 0 auto; 
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+
+        .glass-container {
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: var(--radius-large);
+            box-shadow: var(--shadow-glass);
+            margin: 20px;
+            padding: 0;
+            overflow: hidden;
         }
-        .header { text-align: center; margin-bottom: 40px; }
-        .version-badge { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: 600;
-            display: inline-block;
-            margin-bottom: 20px;
-        }
-        h1 { font-size: 2.5em; color: #333; margin-bottom: 10px; }
-        .btn { 
-            padding: 15px 30px; 
-            margin: 10px; 
-            border: none; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            font-size: 16px;
+
+        .ios-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 32px;
+            border: none;
+            border-radius: var(--radius-medium);
+            font-family: var(--font-family);
+            font-size: var(--font-size-xl);
             font-weight: 600;
             text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s ease;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+            overflow: hidden;
+            min-height: 60px;
+            width: 100%;
+            margin-bottom: 20px;
         }
-        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .btn-success { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; }
-        .btn-info { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+        .ios-button:active {
+            transform: scale(0.96);
+        }
+
+        .ios-button-primary {
+            background: linear-gradient(135deg, var(--ios-blue) 0%, var(--ios-purple) 100%);
+            color: var(--ios-white);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .ios-nav {
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding: 24px;
+            text-align: center;
+        }
+
+        .ios-nav-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--ios-dark);
+            margin-bottom: 8px;
+        }
+
+        .ios-nav-subtitle {
+            color: rgba(0,0,0,0.6);
+            font-size: var(--font-size-base);
+        }
+
+        .main-content {
+            padding: 40px 24px;
+            text-align: center;
+        }
+
+        /* === iOS 26 Components === */
+        .ios-grid {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .ios-grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .ios-grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .ios-grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .ios-card {
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: var(--radius-medium);
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow-glass);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .ios-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-large);
+        }
+
+        .ios-card-title {
+            font-size: var(--font-size-sm);
+            color: rgba(0,0,0,0.6);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .ios-card-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--ios-dark);
+            margin-bottom: 4px;
+        }
+
+        .ios-card-subtitle {
+            font-size: var(--font-size-xs);
+            color: rgba(0,0,0,0.4);
+        }
+
+        .ios-dynamic-island {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--ios-dark);
+            color: var(--ios-white);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .ios-dynamic-island.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(10px);
+        }
+
+        .ios-button-success {
+            background: linear-gradient(135deg, var(--ios-green) 0%, #30D158 100%);
+            color: var(--ios-white);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .ios-button-glass {
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--ios-dark);
+            box-shadow: var(--shadow-glass);
+        }
+
+        .ios-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .ios-button:active::before {
+            left: 100%;
+        }
+
+        /* === Animations === */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .ios-fade-in {
+            animation: fadeInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .ios-scale-in {
+            animation: scaleIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .ios-haptic {
+            transition: all 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .ios-haptic:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            .glass-container {
+                margin: 10px;
+            }
+            
+            .ios-nav-title {
+                font-size: var(--font-size-xl);
+            }
+            
+            .main-content {
+                padding: 30px 20px;
+            }
+
+            .ios-grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .ios-grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .ios-grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .ios-grid-3,
+            .ios-grid-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ios-fade-in,
+            .ios-scale-in {
+                animation: none;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --ios-dark: #FFFFFF;
+                --ios-light: #1C1C1E;
+                --glass-light: rgba(0,0,0,0.25);
+            }
+            
+            body {
+                background: linear-gradient(135deg, #1C1C1E 0%, #2C2C2E 100%);
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="version-badge">V2.0</div>
-            <h1>HPNT ENG Manager</h1>
+    <!-- Dynamic Island -->
+    <div class="ios-dynamic-island" id="dynamicIsland"></div>
+    
+    <div class="glass-container ios-fade-in">
+        <!-- Navigation Header -->
+        <div class="ios-nav">
+            <h1 class="ios-nav-title">🚀 HPNT Manager</h1>
+            <p class="ios-nav-subtitle">💎 자재관리 시스템</p>
         </div>
         
-        <div style="text-align: center;">
-            <a href="/requests?v={{ version }}" class="btn btn-primary">📋 자재요청 목록</a>
-            <a href="/stats?v={{ version }}" class="btn btn-info">📊 통계 보기</a>
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Statistics Cards -->
+            <div class="ios-grid ios-grid-4 ios-scale-in">
+                <div class="ios-card ios-haptic">
+                    <div class="ios-card-title">전체 요청</div>
+                    <div class="ios-card-value" id="totalRequests">-</div>
+                    <div class="ios-card-subtitle">총 요청 수</div>
+                </div>
+                <div class="ios-card ios-haptic">
+                    <div class="ios-card-title">대기 중</div>
+                    <div class="ios-card-value" id="pendingRequests">-</div>
+                    <div class="ios-card-subtitle">승인 대기</div>
+                </div>
+                <div class="ios-card ios-haptic">
+                    <div class="ios-card-title">진행 중</div>
+                    <div class="ios-card-value" id="inProgressRequests">-</div>
+                    <div class="ios-card-subtitle">처리 중</div>
+                </div>
+                <div class="ios-card ios-haptic">
+                    <div class="ios-card-title">완료</div>
+                    <div class="ios-card-value" id="completedRequests">-</div>
+                    <div class="ios-card-subtitle">처리 완료</div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="ios-scale-in">
+                <a href="/requests?v={{ version }}" class="ios-button ios-button-primary ios-haptic">
+                    📋 자재요청 목록
+                </a>
+                
+                <a href="/add?v={{ version }}" class="ios-button ios-button-success ios-haptic">
+                    ➕ 새 요청 추가
+                </a>
+                
+                <a href="/stats?v={{ version }}" class="ios-button ios-button-glass ios-haptic">
+                    📊 상세 통계
+                </a>
+            </div>
+
+            <!-- Environment Info -->
+            <div class="ios-card ios-haptic" style="margin-top: 24px; text-align: left;">
+                <div class="ios-card-title">🔧 시스템 정보</div>
+                <div style="font-size: var(--font-size-sm); color: rgba(0,0,0,0.6); margin-top: 8px;">
+                    <div>환경: <span id="environment">로딩 중...</span></div>
+                    <div>데이터베이스: <span id="database">로딩 중...</span></div>
+                    <div>버전: <span id="appVersion">{{ version }}</span></div>
+                </div>
+            </div>
+
+            <!-- Refresh Button -->
+            <button onclick="refreshData()" class="ios-button ios-button-glass ios-haptic" style="margin-top: 16px;">
+                🔄 새로고침
+            </button>
         </div>
     </div>
+    
+    <script>
+        // PWA 등록
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('SW registered'))
+                .catch(err => console.log('SW registration failed'));
+        }
+
+        // === iOS 26 JavaScript Functions ===
+        
+        // 햅틱 피드백 시뮬레이션
+        function hapticFeedback() {
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
+            }
+        }
+
+        // 다이나믹 아일랜드 표시
+        function showDynamicIsland(message, duration = 3000) {
+            const island = document.getElementById('dynamicIsland');
+            island.textContent = message;
+            island.classList.add('show');
+            
+            setTimeout(() => {
+                island.classList.remove('show');
+            }, duration);
+        }
+
+        // 페이지 로드 애니메이션
+        function pageLoadAnimation() {
+            const elements = document.querySelectorAll('.ios-fade-in, .ios-scale-in');
+            elements.forEach((el, index) => {
+                setTimeout(() => {
+                    el.style.opacity = '1';
+                }, index * 100);
+            });
+        }
+
+        // 통계 데이터 로드
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats?v={{ version }}');
+                const data = await response.json();
+                
+                document.getElementById('totalRequests').textContent = data.total || 0;
+                document.getElementById('pendingRequests').textContent = data.pending || 0;
+                document.getElementById('inProgressRequests').textContent = data.in_progress || 0;
+                document.getElementById('completedRequests').textContent = data.completed || 0;
+                
+                // 환경 정보 업데이트
+                document.getElementById('environment').textContent = data.environment || '로컬';
+                document.getElementById('database').textContent = data.database || 'SQLite';
+                
+                showDynamicIsland('✅ 데이터 로드 완료');
+            } catch (error) {
+                console.error('통계 로드 실패:', error);
+                showDynamicIsland('❌ 데이터 로드 실패');
+            }
+        }
+
+        // 데이터 새로고침
+        function refreshData() {
+            hapticFeedback();
+            showDynamicIsland('🔄 새로고침 중...');
+            loadStats();
+        }
+
+        // 모든 버튼에 햅틱 피드백 추가
+        function addHapticFeedback() {
+            const buttons = document.querySelectorAll('.ios-haptic');
+            buttons.forEach(button => {
+                button.addEventListener('click', hapticFeedback);
+            });
+        }
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            pageLoadAnimation();
+            addHapticFeedback();
+            loadStats();
+            
+            // 다이나믹 아일랜드 초기 메시지
+            setTimeout(() => {
+                showDynamicIsland('🚀 HPNT Manager V2.0');
+            }, 500);
+        });
+
+        // 페이지 가시성 변경 시 데이터 새로고침
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                loadStats();
+            }
+        });
+    </script>
 </body>
 </html>
 '''
@@ -445,676 +877,871 @@ REQUESTS_TEMPLATE = '''
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>📋 자재요청 목록 - HPNT Manager V2.0</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HPNT Manager">
+    <meta name="theme-color" content="#007AFF">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        /* === iOS 26 Design System === */
+        :root {
+            /* iOS 26 Color Palette */
+            --ios-blue: #007AFF;
+            --ios-purple: #5856D6;
+            --ios-green: #34C759;
+            --ios-orange: #FF9500;
+            --ios-red: #FF3B30;
+            --ios-light-blue: #5AC8FA;
+            --ios-dark: #1C1C1E;
+            --ios-light: #F2F2F7;
+            --ios-white: #FFFFFF;
+            --ios-black: #000000;
+            
+            /* Glass Effects */
+            --glass-light: rgba(255,255,255,0.25);
+            --glass-dark: rgba(0,0,0,0.25);
+            --glass-blur: blur(20px);
+            
+            /* Shadows */
+            --shadow-small: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow-medium: 0 4px 16px rgba(0,0,0,0.15);
+            --shadow-large: 0 8px 32px rgba(0,0,0,0.2);
+            --shadow-glass: 0 8px 32px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2);
+            
+            /* Border Radius */
+            --radius-small: 8px;
+            --radius-medium: 16px;
+            --radius-large: 24px;
+            --radius-xl: 32px;
+            
+            /* Typography */
+            --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+            --font-size-xs: 12px;
+            --font-size-sm: 14px;
+            --font-size-base: 16px;
+            --font-size-lg: 18px;
+            --font-size-xl: 20px;
+            --font-size-2xl: 24px;
+            --font-size-3xl: 32px;
+            --font-size-4xl: 48px;
+        }
+
+        /* === Global Reset === */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: var(--font-family);
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden;
+            color: var(--ios-dark);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        .container { 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+
+        /* === iOS 26 Glass Morphism === */
+        .glass-container {
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: var(--radius-large);
+            box-shadow: var(--shadow-glass);
+            margin: 20px;
+            padding: 0;
+            overflow: hidden;
         }
-        .header { text-align: center; margin-bottom: 40px; }
-        h1 { font-size: 2.5em; color: #333; margin-bottom: 10px; }
-        .btn { 
-            padding: 12px 24px; 
-            margin: 5px; 
-            border: none; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 14px;
+
+        .glass-card {
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: var(--radius-medium);
+            box-shadow: var(--shadow-medium);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-large);
+            border-color: rgba(255,255,255,0.4);
+        }
+
+        /* === iOS 26 Buttons === */
+        .ios-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius-medium);
+            font-family: var(--font-family);
+            font-size: var(--font-size-base);
             font-weight: 600;
             text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s ease;
-        }
-        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .btn-success { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; }
-        .request-card { 
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .request-card:hover { 
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-        }
-        .image-thumbnail {
-            width: 80px;
-            height: 80px;
-            border-radius: 8px;
-            object-fit: cover;
-            border: 2px solid #e9ecef;
-            margin-right: 15px;
             cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .image-thumbnail:hover {
-            border-color: #667eea;
-            transform: scale(1.05);
-        }
-        .request-content {
-            display: flex;
-            align-items: flex-start;
-            gap: 15px;
-        }
-        .request-details {
-            flex: 1;
-        }
-        .admin-panel {
-            width: 300px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin-left: 20px;
-            border: 1px solid #e9ecef;
-        }
-        .admin-section {
-            margin-bottom: 20px;
-        }
-        .admin-section h4 {
-            color: #495057;
-            font-size: 0.9em;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-        .toggle-switch {
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
+            overflow: hidden;
+            min-height: 44px; /* iOS Touch Target */
         }
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
+
+        .ios-button::before {
+            content: '';
             position: absolute;
-            cursor: pointer;
             top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: #28a745;
-        }
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-        .admin-select {
+            left: -100%;
             width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-            font-size: 14px;
-            background: white;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
         }
-        .admin-btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 5px;
+
+        .ios-button:hover::before {
+            left: 100%;
+        }
+
+        .ios-button:active {
+            transform: scale(0.96);
+        }
+
+        .ios-button-primary {
+            background: linear-gradient(135deg, var(--ios-blue) 0%, var(--ios-purple) 100%);
+            color: var(--ios-white);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .ios-button-success {
+            background: linear-gradient(135deg, var(--ios-green) 0%, #30D158 100%);
+            color: var(--ios-white);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .ios-button-glass {
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: var(--ios-dark);
+            box-shadow: var(--shadow-glass);
+        }
+
+        /* === iOS 26 Navigation === */
+        .ios-nav {
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding: 16px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .ios-nav-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--ios-dark);
+            text-align: center;
+        }
+
+        /* === iOS 26 Form Elements === */
+        .ios-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-radius: var(--radius-medium);
+            font-family: var(--font-family);
+            font-size: var(--font-size-base);
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            color: var(--ios-dark);
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .ios-input:focus {
+            border-color: var(--ios-blue);
+            box-shadow: 0 0 0 3px rgba(0,122,255,0.1);
+            background: rgba(255,255,255,0.3);
+        }
+
+        .ios-select {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-radius: var(--radius-medium);
+            font-family: var(--font-family);
+            font-size: var(--font-size-base);
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            color: var(--ios-dark);
+            transition: all 0.3s ease;
+            outline: none;
             cursor: pointer;
-            font-size: 12px;
+        }
+
+        .ios-select:focus {
+            border-color: var(--ios-blue);
+            box-shadow: 0 0 0 3px rgba(0,122,255,0.1);
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* === iOS 26 Cards === */
+        .ios-card {
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: var(--radius-large);
+            padding: 24px;
+            box-shadow: var(--shadow-medium);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            margin-bottom: 16px;
+        }
+
+        .ios-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-large);
+        }
+
+        /* === iOS 26 Status Badges === */
+        .ios-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: var(--radius-small);
+            font-size: var(--font-size-sm);
             font-weight: 600;
-            transition: background 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .admin-btn:hover {
-            background: #0056b3;
+
+        .ios-badge-pending {
+            background: rgba(255,149,0,0.2);
+            color: var(--ios-orange);
+            border: 1px solid rgba(255,149,0,0.3);
         }
-        .admin-btn.delete {
-            background: #dc3545;
-            margin-left: 5px;
+
+        .ios-badge-approved {
+            background: rgba(52,199,89,0.2);
+            color: var(--ios-green);
+            border: 1px solid rgba(52,199,89,0.3);
         }
-        .admin-btn.delete:hover {
-            background: #c82333;
+
+        .ios-badge-ordered {
+            background: rgba(0,122,255,0.2);
+            color: var(--ios-blue);
+            border: 1px solid rgba(0,122,255,0.3);
         }
-        .main-content {
-            display: flex;
+
+        .ios-badge-received {
+            background: rgba(88,86,214,0.2);
+            color: var(--ios-purple);
+            border: 1px solid rgba(88,86,214,0.3);
+        }
+
+        .ios-badge-rejected {
+            background: rgba(255,59,48,0.2);
+            color: var(--ios-red);
+            border: 1px solid rgba(255,59,48,0.3);
+        }
+
+        /* === iOS 26 Grid System === */
+        .ios-grid {
+            display: grid;
             gap: 20px;
         }
-        .requests-container {
+
+        .ios-grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .ios-grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .ios-grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        /* === iOS 26 Animations === */
+        @keyframes ios-fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes ios-scale-in {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .ios-fade-in {
+            animation: ios-fade-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .ios-scale-in {
+            animation: ios-scale-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* === iOS 26 Haptic Feedback Simulation === */
+        .ios-haptic {
+            transition: transform 0.1s ease;
+        }
+
+        .ios-haptic:active {
+            transform: scale(0.95);
+        }
+
+        /* === iOS 26 Responsive Design === */
+        @media (max-width: 768px) {
+            .ios-grid-2,
+            .ios-grid-3,
+            .ios-grid-4 {
+                grid-template-columns: 1fr;
+            }
+            
+            .ios-card {
+                padding: 20px;
+            }
+            
+            .ios-button {
+                width: 100%;
+                margin-bottom: 12px;
+            }
+            
+            .ios-nav-title {
+                font-size: var(--font-size-xl);
+            }
+            
+            .glass-container {
+                margin: 10px;
+            }
+            
+            .search-controls {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .ios-card {
+                padding: 16px;
+                border-radius: var(--radius-medium);
+            }
+            
+            .ios-input,
+            .ios-select {
+                padding: 14px 16px;
+                font-size: var(--font-size-base);
+            }
+        }
+
+        /* === iOS 26 Dark Mode Support === */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --ios-dark: #FFFFFF;
+                --ios-light: #1C1C1E;
+                --glass-light: rgba(0,0,0,0.25);
+                --glass-dark: rgba(255,255,255,0.25);
+            }
+            
+            body {
+                background: linear-gradient(135deg, #1C1C1E 0%, #2C2C2E 100%);
+            }
+            
+            .ios-input,
+            .ios-select {
+                color: var(--ios-white);
+                background: var(--glass-dark);
+            }
+            
+            .ios-input:focus,
+            .ios-select:focus {
+                background: rgba(0,0,0,0.3);
+            }
+        }
+
+        /* === iOS 26 Accessibility === */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* === iOS 26 Focus Indicators === */
+        .ios-button:focus-visible,
+        .ios-input:focus-visible,
+        .ios-select:focus-visible {
+            outline: 2px solid var(--ios-blue);
+            outline-offset: 2px;
+        }
+
+        /* === Search Controls === */
+        .search-controls {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-controls form {
+            display: flex;
+            gap: 12px;
+            flex: 1;
+            align-items: center;
+        }
+
+        /* === Request Card Content === */
+        .request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            gap: 12px;
+        }
+
+        .request-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--ios-dark);
             flex: 1;
         }
-        .status-badge { 
-            padding: 6px 12px; 
-            border-radius: 15px; 
-            font-size: 0.9em; 
-            font-weight: 600;
-            display: inline-block;
+
+        .request-details {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 16px;
         }
-        .status-pending { background: #fff3cd; color: #856404; }
-        .status-approved { background: #d4edda; color: #155724; }
-        .status-ordered { background: #cce5ff; color: #004085; }
-        .status-received { background: #e2e3e5; color: #383d41; }
-        .status-rejected { background: #f8d7da; color: #721c24; }
-        .empty-state { text-align: center; padding: 60px 20px; color: #666; }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: var(--font-size-sm);
+            color: rgba(0,0,0,0.7);
+        }
+
+        .detail-label {
+            font-weight: 600;
+            min-width: 60px;
+        }
+
+        .request-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .request-actions .ios-button {
+            font-size: var(--font-size-sm);
+            padding: 8px 16px;
+            min-height: 36px;
+        }
+
+        /* === Request Image === */
+        .request-image { margin: 12px 0; }
+        .request-image-thumb {
+            max-width: 100%;
+            border-radius: var(--radius-small);
+            box-shadow: var(--shadow-small);
+        }
+
+        /* === Empty State === */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: rgba(0,0,0,0.6);
+        }
+
+        .empty-state h3 {
+            font-size: var(--font-size-xl);
+            margin-bottom: 12px;
+            color: var(--ios-dark);
+        }
+
+        .empty-state p {
+            font-size: var(--font-size-base);
+            margin-bottom: 24px;
+        }
+
+        /* === Status Dashboard === */
+        .status-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .status-card {
+            background: var(--glass-light);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: var(--radius-medium);
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .status-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .status-number {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .status-label {
+            font-size: var(--font-size-sm);
+            color: rgba(0,0,0,0.7);
+            font-weight: 600;
+        }
+
+        .status-total .status-number { color: var(--ios-blue); }
+        .status-pending .status-number { color: var(--ios-orange); }
+        .status-approved .status-number { color: var(--ios-green); }
+        .status-ordered .status-number { color: var(--ios-blue); }
+        .status-received .status-number { color: var(--ios-purple); }
+        .status-rejected .status-number { color: var(--ios-red); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📋 자재요청 목록</h1>
-            <div style="margin-top: 20px;">
-                <a href="/" class="btn btn-primary">🏠 홈으로</a>
-                <a href="/add" class="btn btn-success">➕ 새 요청</a>
-            </div>
+    <div class="glass-container">
+        <!-- iOS 26 Navigation -->
+        <div class="ios-nav">
+            <h1 class="ios-nav-title">📋 자재요청 목록</h1>
+            <p style="text-align: center; color: rgba(0,0,0,0.6); margin-top: 8px;">
+                등록된 모든 자재요청을 관리하세요
+            </p>
         </div>
         
-        <!-- 상태별 현황 대시보드 -->
-        <div style="background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h3 style="margin-bottom: 10px; color: #333; font-size: 16px;">📊 상태별 현황</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
-                <div style="background: #f8f9fa; border-radius: 6px; padding: 10px; text-align: center; border-left: 3px solid #6c757d;">
-                    <div style="font-size: 20px; font-weight: bold; color: #6c757d; margin-bottom: 2px;">{{ total_count }}</div>
-                    <div style="font-size: 12px; color: #666;">📝 전체</div>
+        <!-- Main Content -->
+        <div style="padding: 32px;">
+            <!-- Search Controls -->
+            <div class="search-controls">
+                <a href="/" class="ios-button ios-button-glass ios-haptic">
+                    🏠 홈으로
+                </a>
+                <a href="/add" class="ios-button ios-button-success ios-haptic">
+                    ➕ 새 요청
+                </a>
+                
+                <form method="GET" style="flex: 1;">
+                    <input type="text" name="search" class="ios-input" 
+                           placeholder="🔍 자재명, 사양, 사유로 검색..." 
+                           value="{{ search_query }}">
+                    
+                    <select name="status" class="ios-select" onchange="this.form.submit()">
+                        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>전체 상태</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>대기중</option>
+                        <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>승인됨</option>
+                        <option value="ordered" {% if status_filter == 'ordered' %}selected{% endif %}>발주됨</option>
+                        <option value="received" {% if status_filter == 'received' %}selected{% endif %}>입고됨</option>
+                        <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>반려됨</option>
+                    </select>
+                    
+                    <button type="submit" class="ios-button ios-button-primary ios-haptic">
+                        검색
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Status Dashboard -->
+            <div class="status-dashboard">
+                <div class="status-card status-total ios-scale-in">
+                    <div class="status-number">{{ status_counts.get('total', 0) }}</div>
+                    <div class="status-label">전체</div>
                 </div>
-                <div style="background: #fff3cd; border-radius: 6px; padding: 10px; text-align: center; border-left: 3px solid #856404;">
-                    <div style="font-size: 20px; font-weight: bold; color: #856404; margin-bottom: 2px;">{{ status_counts.get('pending', 0) }}</div>
-                    <div style="font-size: 12px; color: #856404;">🕰️ 대기중</div>
+                <div class="status-card status-pending ios-scale-in">
+                    <div class="status-number">{{ status_counts.get('pending', 0) }}</div>
+                    <div class="status-label">대기중</div>
                 </div>
-                <div style="background: #d4edda; border-radius: 6px; padding: 10px; text-align: center; border-left: 3px solid #155724;">
-                    <div style="font-size: 20px; font-weight: bold; color: #155724; margin-bottom: 2px;">{{ status_counts.get('approved', 0) }}</div>
-                    <div style="font-size: 12px; color: #155724;">✅ 승인됨</div>
+                <div class="status-card status-approved ios-scale-in">
+                    <div class="status-number">{{ status_counts.get('approved', 0) }}</div>
+                    <div class="status-label">승인됨</div>
                 </div>
-                <div style="background: #cce5ff; border-radius: 6px; padding: 10px; text-align: center; border-left: 3px solid #004085;">
-                    <div style="font-size: 20px; font-weight: bold; color: #004085; margin-bottom: 2px;">{{ status_counts.get('ordered', 0) }}</div>
-                    <div style="font-size: 12px; color: #004085;">📦 발주완료</div>
+                <div class="status-card status-ordered ios-scale-in">
+                    <div class="status-number">{{ status_counts.get('ordered', 0) }}</div>
+                    <div class="status-label">발주됨</div>
                 </div>
-                <div style="background: #e2e3e5; border-radius: 6px; padding: 10px; text-align: center; border-left: 3px solid #383d41;">
-                    <div style="font-size: 20px; font-weight: bold; color: #383d41; margin-bottom: 2px;">{{ status_counts.get('received', 0) }}</div>
-                    <div style="font-size: 12px; color: #383d41;">✓ 입고완료</div>
+                <div class="status-card status-received ios-scale-in">
+                    <div class="status-number">{{ status_counts.get('received', 0) }}</div>
+                    <div class="status-label">입고됨</div>
                 </div>
-                <div style="background: #f8d7da; border-radius: 6px; padding: 10px; text-align: center; border-left: 3px solid #721c24;">
-                    <div style="font-size: 20px; font-weight: bold; color: #721c24; margin-bottom: 2px;">{{ status_counts.get('rejected', 0) }}</div>
-                    <div style="font-size: 12px; color: #721c24;">❌ 반려</div>
+                <div class="status-card status-rejected ios-scale-in">
+                    <div class="status-number">{{ status_counts.get('rejected', 0) }}</div>
+                    <div class="status-label">반려됨</div>
                 </div>
             </div>
-        </div>
-        
-        <div class="content">
+            
             {% if requests %}
+            <!-- Request Cards -->
             <div class="requests-list">
-                <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 20px;">
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <form method="GET" action="/requests" style="display: flex; gap: 10px; align-items: center;">
-                            <input type="text" name="search" 
-                                   value="{{ search_query if search_query else '' }}" 
-                                   placeholder="자재명, 사양, 사유로 검색..." 
-                                   style="padding: 8px 12px; border: 1px solid #ced4da; border-radius: 5px; width: 250px; font-size: 14px;">
-                            <button type="submit" class="btn btn-secondary" style="padding: 8px 15px;">
-                                🔍 검색
-                            </button>
-                            {% if search_query %}
-                            <a href="/requests" class="btn btn-outline-secondary" style="padding: 8px 15px;">
-                                ❌ 초기화
-                            </a>
-                            {% endif %}
-                        </form>
-                        <!-- RAILWAY DEBUG: {{ total_count }} requests loaded -->
-                        <button onclick="reindexIds()" class="btn btn-warning reindex-btn" style="padding: 8px 15px; margin-left: 10px;" title="모든 ID를 #1부터 순차적으로 재정렬">
-                            🔄 ID 재정렬
-                        </button>
-                    </div>
-                </div>
-                
-                {% if search_query %}
-                <div style="background: #e3f2fd; padding: 10px 15px; border-radius: 5px; margin-bottom: 15px; color: #1565c0;">
-                    🔍 검색 결과: "{{ search_query }}" (총 {{ requests|length }}건)
-                </div>
-                {% endif %}
-                
-                <!-- 간단한 헤더 -->
-                <div style="background: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; color: #495057; border: 1px solid #dee2e6;">
-                    <div style="display: grid; grid-template-columns: 50px 1fr 100px 100px 80px 170px 130px 80px; gap: 8px; align-items: center;">
-                        <div>ID</div>
-                        <div>자재 정보</div>
-                        <div>상태</div>
-                        <div>이미지</div>
-                        <div>긴급도</div>
-                        <div>발주업체</div>
-                        <div>관리</div>
-                        <div>삭제</div>
-                    </div>
-                </div>
-                
                 {% for req in requests %}
-                <div class="request-item" style="background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 15px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="display: grid; grid-template-columns: 50px 1fr 100px 100px 80px 170px 130px 80px; gap: 8px; align-items: center;">
-                        
-                        <!-- ID -->
-                        <div style="font-weight: bold; color: #007bff; font-size: 16px;">
-                            #{{ req[0] }}
+                <div class="ios-card ios-fade-in">
+                    <div class="request-header">
+                        <div class="request-title">{{ req[1] }}</div>
+                        <div class="ios-badge ios-badge-{{ req[8] }}">
+                            {% if req[8] == 'pending' %}대기중
+                            {% elif req[8] == 'approved' %}승인됨
+                            {% elif req[8] == 'ordered' %}발주됨
+                            {% elif req[8] == 'received' %}입고됨
+                            {% elif req[8] == 'rejected' %}반려됨
+                            {% endif %}
                         </div>
-                        
-                        <!-- 자재 정보 -->
-                        <div id="material_info_{{ req[0] }}" ondblclick="editMaterialInfo({{ req[0] }})" style="cursor: pointer;" title="더블클릭하여 수정">
-                            <div id="display_mode_{{ req[0] }}">
-                                <div style="font-weight: bold; font-size: 16px; color: #333; margin-bottom: 5px;">
-                                    🔧 <span id="item_name_display_{{ req[0] }}">{{ req[1] }}</span>
-                                </div>
-                                <div style="color: #666; font-size: 13px; margin-bottom: 3px;">
-                                    📅 {{ req[6] }} | 📦 <span id="quantity_display_{{ req[0] }}">{{ req[2] }}</span>개
-                                </div>
-                                {% if req[3] %}
-                                <div style="color: #666; font-size: 12px; margin-bottom: 3px;">
-                                    📋 <span id="specifications_display_{{ req[0] }}">{{ req[3] }}</span>
-                                </div>
-                                {% endif %}
-                                {% if req[4] %}
-                                <div style="color: #666; font-size: 12px;">
-                                    📝 <span id="reason_display_{{ req[0] }}">{{ req[4] }}</span>
-                                </div>
-                                {% endif %}
-                            </div>
-                            
-                            <div id="edit_mode_{{ req[0] }}" style="display: none;">
-                                <div style="margin-bottom: 8px;">
-                                    <label style="font-size: 12px; font-weight: bold; color: #333;">자재명:</label>
-                                    <input type="text" id="item_name_edit_{{ req[0] }}" value="{{ req[1] }}" 
-                                           style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px;">
-                                </div>
-                                <div style="margin-bottom: 8px;">
-                                    <label style="font-size: 12px; font-weight: bold; color: #333;">수량:</label>
-                                    <input type="number" id="quantity_edit_{{ req[0] }}" value="{{ req[2] }}" min="1"
-                                           style="width: 80px; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px;">
-                                </div>
-                                <div style="margin-bottom: 8px;">
-                                    <label style="font-size: 12px; font-weight: bold; color: #333;">사양:</label>
-                                    <textarea id="specifications_edit_{{ req[0] }}" 
-                                              style="width: 100%; height: 50px; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; resize: vertical;">{{ req[3] or '' }}</textarea>
-                                </div>
-                                <div style="margin-bottom: 8px;">
-                                    <label style="font-size: 12px; font-weight: bold; color: #333;">요청 사유:</label>
-                                    <textarea id="reason_edit_{{ req[0] }}" 
-                                              style="width: 100%; height: 50px; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; resize: vertical;">{{ req[4] or '' }}</textarea>
-                                </div>
-                                <div style="display: flex; gap: 5px;">
-                                    <button onclick="saveMaterialInfo({{ req[0] }})" 
-                                            style="padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 3px; font-size: 11px; cursor: pointer;">
-                                        저장
-                                    </button>
-                                    <button onclick="cancelEditMaterialInfo({{ req[0] }})" 
-                                            style="padding: 5px 10px; background: #6c757d; color: white; border: none; border-radius: 3px; font-size: 11px; cursor: pointer;">
-                                        취소
-                                    </button>
-                                </div>
-                            </div>
+                    </div>
+                    
+                    <div class="request-details">
+                        <div class="detail-item">
+                            <span class="detail-label">📦 수량:</span>
+                            <span>{{ req[2] }}개</span>
                         </div>
-                        
-                        <!-- 상태 -->
-                        <div style="text-align: center;">
-                            <span class="badge badge-{% if req[8] == 'pending' %}secondary{% elif req[8] == 'approved' %}primary{% elif req[8] == 'ordered' %}info{% elif req[8] == 'received' %}success{% else %}danger{% endif %}" 
-                                  style="font-size: 13px; padding: 6px 12px; font-weight: bold;">
-                                {% if req[8] == 'pending' %}🕰️ 대기중
-                                {% elif req[8] == 'approved' %}✅ 승인됨
-                                {% elif req[8] == 'ordered' %}📦 발주완료
-                                {% elif req[8] == 'received' %}✓ 입고완료
-                                {% else %}❌ 반려{% endif %}
-                            </span>
+                        {% if req[3] %}
+                        <div class="detail-item">
+                            <span class="detail-label">📋 사양:</span>
+                            <span>{{ req[3] }}</span>
                         </div>
-                        
-                        <!-- 이미지 -->
-                        <div id="image_section_{{ req[0] }}" ondblclick="editImageInfo({{ req[0] }})" style="text-align: center; cursor: pointer;" title="더블클릭하여 이미지 수정">
-                            <div id="image_display_mode_{{ req[0] }}">
-                                {% if req[9] %}
-                                    <div style="margin-bottom: 5px;">
-                                        <span class="badge badge-success">첨부됨</span>
-                                    </div>
-                                    <a href="/images/{{ req[9] }}" target="_blank" 
-                                       style="display: inline-block; padding: 5px 10px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; font-size: 11px;">
-                                        🔍 보기
-                                    </a>
-                                {% else %}
-                                    <span style="color: #999; font-size: 12px;">이미지 없음</span>
-                                {% endif %}
-                            </div>
-                            
-                            <div id="image_edit_mode_{{ req[0] }}" style="display: none; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                                <div style="margin-bottom: 8px;">
-                                    <label style="font-size: 12px; font-weight: bold; color: #333;">이미지 업로드:</label>
-                                    <input type="file" id="image_file_{{ req[0] }}" accept="image/*" 
-                                           style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 11px;">
-                                </div>
-                                {% if req[9] %}
-                                <div style="margin-bottom: 8px;">
-                                    <img src="/images/{{ req[9] }}" alt="현재 이미지" 
-                                         style="max-width: 80px; max-height: 60px; border: 1px solid #ddd; border-radius: 3px;">
-                                    <div style="font-size: 10px; color: #666; margin-top: 2px;">현재 이미지</div>
-                                </div>
-                                {% endif %}
-                                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                    <button onclick="saveImageInfo({{ req[0] }})" 
-                                            style="padding: 4px 8px; background: #28a745; color: white; border: none; border-radius: 3px; font-size: 10px; cursor: pointer;">
-                                        💾 저장
-                                    </button>
-                                    {% if req[9] %}
-                                    <button onclick="deleteImageInfo({{ req[0] }})" 
-                                            style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 3px; font-size: 10px; cursor: pointer;">
-                                        🗑️ 삭제
-                                    </button>
-                                    {% endif %}
-                                    <button onclick="cancelEditImageInfo({{ req[0] }})" 
-                                            style="padding: 4px 8px; background: #6c757d; color: white; border: none; border-radius: 3px; font-size: 10px; cursor: pointer;">
-                                        취소
-                                    </button>
-                                </div>
-                            </div>
+                        {% endif %}
+                        {% if req[4] %}
+                        <div class="detail-item">
+                            <span class="detail-label">📝 사유:</span>
+                            <span>{{ req[4] }}</span>
                         </div>
-                        
-                        <!-- 긴급도 -->
-                        <div style="text-align: center;">
-                            <span class="badge badge-{% if req[5] == 'high' %}danger{% elif req[5] == 'normal' %}warning{% else %}success{% endif %}" 
-                                  style="font-size: 12px; padding: 5px 10px;">
+                        {% endif %}
+                        {% if req[7] %}
+                        <div class="detail-item">
+                            <span class="detail-label">🏢 업체:</span>
+                            <span>{{ req[7] }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="detail-item">
+                            <span class="detail-label">⚡ 긴급도:</span>
+                            <span>
                                 {% if req[5] == 'high' %}🔴 높음
                                 {% elif req[5] == 'normal' %}🟡 보통
-                                {% else %}🟢 낮음{% endif %}
+                                {% else %}🟢 낮음
+                                {% endif %}
                             </span>
                         </div>
-                        
-                        <!-- 발주업체 -->
-                        <div style="display: flex; align-items: center; gap: 5px;">
-                            <div>
-                                {% if req[7] and req[7] != '대기중' %}
-                                    <input type="text" class="form-control form-control-sm" id="vendor_{{ req[0] }}" 
-                                           list="vendor_list_{{ req[0] }}" 
-                                           value="{{ req[7] }}" 
-                                           placeholder="대기중" 
-                                           style="width: 120px; font-size: 12px; padding: 5px 8px;">
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" id="vendor_{{ req[0] }}" 
-                                           list="vendor_list_{{ req[0] }}" 
-                                           value="" 
-                                           placeholder="대기중" 
-                                           style="width: 120px; font-size: 12px; padding: 5px 8px; color: #999;">
-                                {% endif %}
-                                <datalist id="vendor_list_{{ req[0] }}">
-                                    <option value="대기중">
-                                    <option value="ABC상사">
-                                    <option value="XYZ공업">
-                                    <option value="한국자재">
-                                    <option value="대한공급">
-                                    <option value="삼성물산">
-                                    <option value="LG상사">
-                                    <option value="현대건설">
-                                </datalist>
-                            </div>
-                            <button onclick="updateRequest({{ req[0] }})" 
-                                    style="display: inline-block; padding: 8px 10px; background: #28a745; color: white; text-decoration: none; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; min-width: 35px;">
-                                ✓
-                            </button>
+                        <div class="detail-item">
+                            <span class="detail-label">📅 등록일:</span>
+                            <span>{{ req[10] }}</span>
                         </div>
-                        
-                        <!-- 관리 -->
-                        <div>
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <div style="flex: 1;">
-                                    <select class="form-control form-control-sm" id="status_{{ req[0] }}" 
-                                            style="width: 100%; font-size: 12px; padding: 5px 8px;">
-                                        <option value="pending" {% if req[8] == 'pending' %}selected{% endif %}>대기중</option>
-                                        <option value="approved" {% if req[8] == 'approved' %}selected{% endif %}>승인됨</option>
-                                        <option value="ordered" {% if req[8] == 'ordered' %}selected{% endif %}>발주완료</option>
-                                        <option value="received" {% if req[8] == 'received' %}selected{% endif %}>입고완료</option>
-                                        <option value="rejected" {% if req[8] == 'rejected' %}selected{% endif %}>반려</option>
-                                    </select>
-                                </div>
-                                <button onclick="updateRequest({{ req[0] }})" 
-                                        style="display: inline-block; padding: 8px 10px; background: #007bff; color: white; text-decoration: none; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; min-width: 35px;">
-                                    ✓
-                                </button>
-                            </div>
+                    </div>
+                 
+                 <!-- Inline Vendor/Status Editor -->
+                 <div class="ios-grid ios-grid-2" style="margin-bottom: 12px;">
+                     <input id="vendor-{{ req[0] }}" type="text" class="ios-input" placeholder="발주업체"
+                            value="{{ req[7] or '' }}">
+                     <select id="status-{{ req[0] }}" class="ios-select">
+                         <option value="pending" {% if req[8] == 'pending' %}selected{% endif %}>대기중</option>
+                         <option value="approved" {% if req[8] == 'approved' %}selected{% endif %}>승인됨</option>
+                         <option value="ordered" {% if req[8] == 'ordered' %}selected{% endif %}>발주됨</option>
+                         <option value="received" {% if req[8] == 'received' %}selected{% endif %}>입고됨</option>
+                         <option value="rejected" {% if req[8] == 'rejected' %}selected{% endif %}>반려됨</option>
+                     </select>
+                 </div>
+                    
+                    <!-- Image Section -->
+                    <div class="request-image">
+                        {% if req[9] %}
+                        <a href="/images/{{ req[9] }}" target="_blank">
+                            <img src="/images/{{ req[9] }}" class="request-image-thumb" alt="이미지">
+                        </a>
+                        <div class="request-actions" style="margin-top: 8px;">
+                            <button onclick="deleteImage({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">이미지 삭제</button>
                         </div>
-                        
-                        <!-- 삭제 -->
-                        <div style="text-align: center; display: flex; flex-direction: column; gap: 5px;">
-                            <button onclick="copyRequest({{ req[0] }})" 
-                                    style="background: #28a745; color: white; border: none; border-radius: 4px; font-size: 11px; padding: 6px 12px; cursor: pointer;">
-                                복사
-                            </button>
-                            <button onclick="deleteRequest({{ req[0] }})" 
-                                    style="background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 11px; padding: 6px 12px; cursor: pointer;">
-                                삭제
-                            </button>
+                        {% else %}
+                        <div class="detail-item">🖼️ 이미지 없음</div>
+                        {% endif %}
+                        <div style="margin-top: 8px;">
+                            <input type="file" accept="image/*" onchange="onPickImage({{ req[0] }}, this)">
                         </div>
+                    </div>
+
+                    <div class="request-actions">
+                     <button onclick="updateRequest({{ req[0] }})" class="ios-button ios-button-success ios-haptic">
+                         저장
+                     </button>
                         
+                        <button onclick="copyRequest({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">
+                            복사
+                        </button>
+                        <button onclick="deleteRequest({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">
+                            삭제
+                        </button>
                     </div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <div class="empty-state">
+            <!-- Empty State -->
+            <div class="empty-state ios-fade-in">
                 <h3>📭 등록된 자재요청이 없습니다</h3>
                 <p>새로운 자재요청을 등록해보세요!</p>
-                <a href="/add" class="btn btn-success" style="margin-top: 20px;">➕ 첫 요청 등록하기</a>
+                <a href="/add" class="ios-button ios-button-success ios-haptic">
+                    ➕ 첫 요청 등록하기
+                </a>
             </div>
             {% endif %}
         </div>
     </div>
     
     <script>
-        // 자재요청 상태 관리 JavaScript 기능
+        // iOS 26 Haptic Feedback Simulation
+        function iosHapticFeedback() {
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
+            }
+        }
+        
+        // Add haptic feedback to all interactive elements
+        document.querySelectorAll('.ios-haptic').forEach(element => {
+            element.addEventListener('touchstart', iosHapticFeedback);
+            element.addEventListener('click', iosHapticFeedback);
+        });
+        
+        // Copy Request Function
+        function copyRequest(requestId) {
+            if (confirm('이 요청을 복사하시겠습니까?')) {
+                fetch(`/admin/copy/${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('요청이 복사되었습니다!');
+                        location.reload();
+                    } else {
+                        alert('복사 실패: ' + (data.error || '알 수 없는 오류'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('복사 중 오류가 발생했습니다.');
+                });
+            }
+        }
+        
+        // Update Vendor/Status Inline
         function updateRequest(requestId) {
-            const vendorInput = document.getElementById(`vendor_${requestId}`);
-            const statusSelect = document.getElementById(`status_${requestId}`);
-            
-            const vendor = vendorInput.value;
-            const status = statusSelect.value;
-            
-            // AJAX 요청으로 서버에 업데이트 전송
+            const vendor = document.getElementById(`vendor-${requestId}`).value;
+            const status = document.getElementById(`status-${requestId}`).value;
             fetch(`/admin/update/${requestId}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    vendor: vendor,
-                    status: status
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vendor, status })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ 성공적으로 업데이트되었습니다!');
-                    location.reload(); // 페이지 새로고침
-                } else {
-                    alert('❌ 업데이트 실패: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('❌ 업데이트 중 오류가 발생했습니다.');
-            });
-        }
-        
-        function copyRequest(requestId) {
-            if (confirm('이 자재요청을 복사하여 새 요청으로 등록하시겠습니까?')) {
-                fetch(`/admin/copy/${requestId}`, {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('✅ 성공적으로 복사되었습니다!');
-                        location.reload();
-                    } else {
-                        alert('❌ 복사 실패: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('❌ 복사 중 오류가 발생했습니다.');
-                });
-            }
-        }
-        
-        // 자재정보 인라인 편집 기능
-        function editMaterialInfo(requestId) {
-            document.getElementById(`display_mode_${requestId}`).style.display = 'none';
-            document.getElementById(`edit_mode_${requestId}`).style.display = 'block';
-        }
-        
-        function cancelEditMaterialInfo(requestId) {
-            document.getElementById(`display_mode_${requestId}`).style.display = 'block';
-            document.getElementById(`edit_mode_${requestId}`).style.display = 'none';
-        }
-        
-        function saveMaterialInfo(requestId) {
-            const itemName = document.getElementById(`item_name_edit_${requestId}`).value;
-            const quantity = document.getElementById(`quantity_edit_${requestId}`).value;
-            const specifications = document.getElementById(`specifications_edit_${requestId}`).value;
-            const reason = document.getElementById(`reason_edit_${requestId}`).value;
-            
-            if (!itemName.trim()) {
-                alert('자재명은 필수 입력 항목입니다.');
-                return;
-            }
-            
-            if (quantity < 1) {
-                alert('수량은 1 이상이어야 합니다.');
-                return;
-            }
-            
-            fetch(`/admin/edit/${requestId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    item_name: itemName,
-                    quantity: parseInt(quantity),
-                    specifications: specifications,
-                    reason: reason
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ 성공적으로 수정되었습니다!');
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    alert('저장되었습니다.');
                     location.reload();
                 } else {
-                    alert('❌ 수정 실패: ' + data.error);
+                    alert('저장 실패: ' + (d.error || '알 수 없는 오류'));
                 }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('❌ 수정 중 오류가 발생했습니다.');
+            .catch(err => {
+                console.error(err);
+                alert('저장 중 오류가 발생했습니다.');
             });
         }
-        
-        // 이미지 인라인 편집 기능
-        function editImageInfo(requestId) {
-            document.getElementById(`image_display_mode_${requestId}`).style.display = 'none';
-            document.getElementById(`image_edit_mode_${requestId}`).style.display = 'block';
+
+        // Image Upload/Delete
+        function onPickImage(requestId, inputEl) {
+            const file = inputEl.files && inputEl.files[0];
+            if (!file) return;
+            uploadImage(requestId, file);
         }
-        
-        function cancelEditImageInfo(requestId) {
-            document.getElementById(`image_display_mode_${requestId}`).style.display = 'block';
-            document.getElementById(`image_edit_mode_${requestId}`).style.display = 'none';
-        }
-        
-        function saveImageInfo(requestId) {
-            const fileInput = document.getElementById(`image_file_${requestId}`);
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                alert('업로드할 이미지 파일을 선택해주세요.');
-                return;
-            }
-            
-            // 파일 크기 체크 (5MB 제한)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('이미지 파일 크기는 5MB 이하여야 합니다.');
-                return;
-            }
-            
-            // 이미지 파일 형식 체크
-            if (!file.type.startsWith('image/')) {
-                alert('이미지 파일만 업로드 가능합니다.');
-                return;
-            }
-            
+
+        function uploadImage(requestId, file) {
             const formData = new FormData();
             formData.append('image', file);
-            
-            fetch(`/admin/image/${requestId}`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ 이미지가 성공적으로 업데이트되었습니다!');
-                    location.reload();
-                } else {
-                    alert('❌ 이미지 업데이트 실패: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('❌ 이미지 업데이트 중 오류가 발생했습니다.');
-            });
+            fetch(`/admin/image/${requestId}`, { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) {
+                        alert('이미지가 업로드되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('업로드 실패: ' + (d.error || '알 수 없는 오류'));
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('업로드 중 오류가 발생했습니다.');
+                });
         }
-        
-        function deleteImageInfo(requestId) {
-            if (confirm('현재 이미지를 삭제하시겠습니까?')) {
-                fetch(`/admin/image/${requestId}`, {
-                    method: 'DELETE'
+
+        function deleteImage(requestId) {
+            if (!confirm('이미지를 삭제하시겠습니까?')) return;
+            fetch(`/admin/image/${requestId}`, { method: 'DELETE' })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) {
+                        alert('이미지가 삭제되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('삭제 실패: ' + (d.error || '알 수 없는 오류'));
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('삭제 중 오류가 발생했습니다.');
+                });
+        }
+
+        // Delete Request Function
+        function deleteRequest(requestId) {
+            if (confirm('이 요청을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+                fetch(`/admin/delete/${requestId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('✅ 이미지가 성공적으로 삭제되었습니다!');
+                        alert('요청이 삭제되었습니다!');
                         location.reload();
                     } else {
-                        alert('❌ 이미지 삭제 실패: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('❌ 이미지 삭제 중 오류가 발생했습니다.');
-                });
-            }
-        }
-        
-        function deleteRequest(requestId) {
-            if (confirm('이 자재요청을 삭제하시겠습니까?')) {
-                fetch(`/admin/delete/${requestId}`, {
-                    method: 'DELETE'
-                })
-                .then(response => {
-                    if (response.ok) {
-                        location.reload();
-                    } else {
-                        alert('삭제 중 오류가 발생했습니다.');
+                        alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
                     }
                 })
                 .catch(error => {
@@ -1124,32 +1751,15 @@ REQUESTS_TEMPLATE = '''
             }
         }
         
-        // ID 재정렬 기능
-        function reindexIds() {
-            var confirmMsg = '모든 자재요청 ID를 #1부터 순차적으로 재정렬하시겠습니까?' + String.fromCharCode(10) + String.fromCharCode(10) + '주의: 이 작업은 되돌릴 수 없습니다.';
-            if (confirm(confirmMsg)) {
-                fetch('/admin/reindex-ids', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(function(response) { return response.json(); })
-                .then(function(data) {
-                    if (data.success) {
-                        alert('성공: ' + data.message);
-                        location.reload();
-                    } else {
-                        alert('실패: ID 재정렬 실패 - ' + data.error);
-                    }
-                })
-                .catch(function(error) {
-                    console.error('Error:', error);
-                    alert('오류: ID 재정렬 중 오류가 발생했습니다.');
-                });
-            }
-        }
-
+        // Page Load Animation
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.style.opacity = '0';
+            document.body.style.transition = 'opacity 0.3s ease';
+            
+            setTimeout(() => {
+                document.body.style.opacity = '1';
+            }, 100);
+        });
     </script>
 </body>
 </html>
@@ -1516,10 +2126,66 @@ def home():
         env = detect_environment().upper()
         db_location = "로컬 DB (프로젝트/db)"
         
+        # 통계 데이터 가져오기
+        stats = {}
+        try:
+            if USE_POSTGRES:
+                # PostgreSQL 사용
+                status_counts = get_status_counts()
+                stats = {
+                    'total': sum(status_counts.values()),
+                    'pending': status_counts.get('pending', 0),
+                    'approved': status_counts.get('approved', 0),
+                    'ordered': status_counts.get('ordered', 0),
+                    'received': status_counts.get('received', 0),
+                    'rejected': status_counts.get('rejected', 0),
+                    'completed': status_counts.get('completed', 0)
+                }
+            else:
+                # SQLite 사용
+                db_path = get_material_db_path()
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                
+                # 전체 카운트
+                cursor.execute("SELECT COUNT(*) FROM material_requests")
+                stats['total'] = cursor.fetchone()[0]
+                
+                # 상태별 카운트
+                cursor.execute("""
+                    SELECT status, COUNT(*) as count 
+                    FROM material_requests 
+                    GROUP BY status
+                """)
+                status_counts = dict(cursor.fetchall())
+                
+                stats.update({
+                    'pending': status_counts.get('pending', 0),
+                    'approved': status_counts.get('approved', 0),
+                    'ordered': status_counts.get('ordered', 0),
+                    'received': status_counts.get('received', 0),
+                    'rejected': status_counts.get('rejected', 0),
+                    'completed': status_counts.get('completed', 0)
+                })
+                
+                conn.close()
+        except Exception as e:
+            logger.error(f"통계 데이터 로드 실패: {e}")
+            stats = {
+                'total': 0,
+                'pending': 0,
+                'approved': 0,
+                'ordered': 0,
+                'received': 0,
+                'rejected': 0,
+                'completed': 0
+            }
+        
         return render_template_string(HOME_TEMPLATE, 
                                     environment=env,
                                     db_location=db_location,
                                     version=APP_VERSION,
+                                    stats=stats,
                                     get_app_version=get_app_version)
     except Exception as e:
         logger.error(f"홈페이지 로드 실패: {e}")
@@ -1690,10 +2356,7 @@ def add_page():
     
     return render_template_string(ADD_TEMPLATE, get_app_version=get_app_version)
 
-@app.route('/stats')
-def stats_page():
-    """통계 페이지"""
-    return "<h1>📊 통계</h1><p>곧 구현될 예정입니다!</p><a href='/'>← 홈으로</a>"
+# 중복된 통계 페이지 라우트 제거 (아래에서 이미 정의됨)
 
 @app.route('/images/<filename>')
 def serve_image(filename):
@@ -2413,6 +3076,78 @@ def backup_test():
         return f"<div class='alert alert-danger'>백업 미리보기 실패: {str(e)}</div>"
     
     return "<div class='alert alert-warning'>백업 데이터가 없습니다.</div>"
+
+@app.route('/api/stats')
+def api_stats():
+    """API 통계 엔드포인트"""
+    try:
+        if USE_POSTGRES:
+            # PostgreSQL 사용
+            status_counts = get_status_counts()
+            stats = {
+                'total': sum(status_counts.values()),
+                'pending': status_counts.get('pending', 0),
+                'approved': status_counts.get('approved', 0),
+                'ordered': status_counts.get('ordered', 0),
+                'received': status_counts.get('received', 0),
+                'rejected': status_counts.get('rejected', 0),
+                'completed': status_counts.get('completed', 0),
+                'in_progress': status_counts.get('in_progress', 0),
+                'environment': detect_environment(),
+                'database': 'PostgreSQL'
+            }
+        else:
+            # SQLite 사용
+            db_path = get_material_db_path()
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # 전체 카운트
+            cursor.execute("SELECT COUNT(*) FROM material_requests")
+            total = cursor.fetchone()[0]
+            
+            # 상태별 카운트
+            cursor.execute("""
+                SELECT status, COUNT(*) as count 
+                FROM material_requests 
+                GROUP BY status
+            """)
+            status_counts = dict(cursor.fetchall())
+            
+            stats = {
+                'total': total,
+                'pending': status_counts.get('pending', 0),
+                'approved': status_counts.get('approved', 0),
+                'ordered': status_counts.get('ordered', 0),
+                'received': status_counts.get('received', 0),
+                'rejected': status_counts.get('rejected', 0),
+                'completed': status_counts.get('completed', 0),
+                'in_progress': status_counts.get('in_progress', 0),
+                'environment': detect_environment(),
+                'database': 'SQLite'
+            }
+            
+            conn.close()
+        
+        return jsonify(stats)
+        
+    except Exception as e:
+        logger.error(f"API 통계 로드 실패: {e}")
+        return jsonify({
+            'total': 0,
+            'pending': 0,
+            'approved': 0,
+            'ordered': 0,
+            'received': 0,
+            'rejected': 0,
+            'completed': 0,
+            'error': str(e)
+        }), 500
+
+@app.route('/stats')
+def stats_page():
+    """통계 페이지"""
+    return "<h1>📊 통계</h1><p>곧 구현될 예정입니다!</p><a href='/'>← 홈으로</a>"
 
 
 if __name__ == '__main__':

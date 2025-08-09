@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>🚀 HPNT Manager V2.0 - iOS 26</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HPNT Manager">
+    <meta name="theme-color" content="#007AFF">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <style>
+        {css}
+    </style>
+</head>
+<body>
+    <div class="glass-container" style="margin: 20px; padding: 0; overflow: hidden;">
+        <!-- iOS 26 Dynamic Island -->
+        <div class="ios-dynamic-island" style="position: absolute; top: 20px; right: 20px; z-index: 1000;">
+            <span>📱</span>
+            <span>HPNT Manager V2.0</span>
+        </div>
+        
+        <!-- iOS 26 Navigation -->
+        <div class="ios-nav">
+            <h1 class="ios-nav-title">🚀 HPNT Manager</h1>
+            <p style="text-align: center; color: rgba(0,0,0,0.6); margin-top: 8px;">
+                💎 iOS 26 스타일 자재관리 시스템
+            </p>
+        </div>
+        
+        <!-- Main Content -->
+        <div style="padding: 32px;">
+            <!-- Quick Actions -->
+            <div class="ios-grid ios-grid-2" style="margin-bottom: 32px;">
+                <a href="/requests" class="ios-button ios-button-primary ios-haptic ios-fade-in">
+                    📋 자재요청 목록
+                </a>
+                <a href="/add" class="ios-button ios-button-success ios-haptic ios-fade-in">
+                    ➕ 새 요청 등록
+                </a>
+            </div>
+            
+            <!-- Statistics Cards -->
+            <div class="ios-grid ios-grid-4" style="margin-bottom: 32px;">
+                <div class="ios-card ios-scale-in">
+                    <div style="text-align: center;">
+                        <div style="font-size: 32px; font-weight: 700; color: var(--ios-blue); margin-bottom: 8px;">
+                            {{ stats.total or 0 }}
+                        </div>
+                        <div style="color: rgba(0,0,0,0.6); font-weight: 600;">전체 요청</div>
+                    </div>
+                </div>
+                
+                <div class="ios-card ios-scale-in">
+                    <div style="text-align: center;">
+                        <div style="font-size: 32px; font-weight: 700; color: var(--ios-orange); margin-bottom: 8px;">
+                            {{ stats.pending or 0 }}
+                        </div>
+                        <div style="color: rgba(0,0,0,0.6); font-weight: 600;">대기중</div>
+                    </div>
+                </div>
+                
+                <div class="ios-card ios-scale-in">
+                    <div style="text-align: center;">
+                        <div style="font-size: 32px; font-weight: 700; color: var(--ios-green); margin-bottom: 8px;">
+                            {{ stats.approved or 0 }}
+                        </div>
+                        <div style="color: rgba(0,0,0,0.6); font-weight: 600;">승인됨</div>
+                    </div>
+                </div>
+                
+                <div class="ios-card ios-scale-in">
+                    <div style="text-align: center;">
+                        <div style="font-size: 32px; font-weight: 700; color: var(--ios-purple); margin-bottom: 8px;">
+                            {{ stats.completed or 0 }}
+                        </div>
+                        <div style="color: rgba(0,0,0,0.6); font-weight: 600;">완료</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Feature Cards -->
+            <div class="ios-grid ios-grid-3">
+                <div class="ios-card ios-fade-in">
+                    <div style="text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">☁️</div>
+                        <h3 style="margin-bottom: 12px; color: var(--ios-dark);">iCloud 동기화</h3>
+                        <p style="color: rgba(0,0,0,0.6); line-height: 1.5;">
+                            모든 Apple 기기에서 실시간 데이터 동기화
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="ios-card ios-fade-in">
+                    <div style="text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📱</div>
+                        <h3 style="margin-bottom: 12px; color: var(--ios-dark);">iOS 26 최적화</h3>
+                        <p style="color: rgba(0,0,0,0.6); line-height: 1.5;">
+                            최신 iOS 26 디자인 언어 적용
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="ios-card ios-fade-in">
+                    <div style="text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">⚡</div>
+                        <h3 style="margin-bottom: 12px; color: var(--ios-dark);">경량화 설계</h3>
+                        <p style="color: rgba(0,0,0,0.6); line-height: 1.5;">
+                            빠르고 가벼운 성능 최적화
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Environment Info -->
+            <div class="ios-card" style="margin-top: 32px; text-align: center;">
+                <p style="color: rgba(0,0,0,0.6); margin-bottom: 8px;">
+                    🍎 {{ environment }} | 📊 {{ db_location }}
+                </p>
+                <button onclick="location.reload()" class="ios-button ios-button-glass ios-haptic">
+                    🔄 새로고침
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // iOS 26 Haptic Feedback Simulation
+        function iosHapticFeedback() {
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
+            }
+        }
+        
+        // Add haptic feedback to all interactive elements
+        document.querySelectorAll('.ios-haptic').forEach(element => {
+            element.addEventListener('touchstart', iosHapticFeedback);
+            element.addEventListener('click', iosHapticFeedback);
+        });
+        
+        // Dynamic Island Animation
+        const dynamicIsland = document.querySelector('.ios-dynamic-island');
+        if (dynamicIsland) {
+            setTimeout(() => {
+                dynamicIsland.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    dynamicIsland.style.transform = 'scale(1)';
+                }, 200);
+            }, 1000);
+        }
+        
+        // Toast Notification System
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = 'ios-toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+        
+        // Page Load Animation
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.style.opacity = '0';
+            document.body.style.transition = 'opacity 0.3s ease';
+            
+            setTimeout(() => {
+                document.body.style.opacity = '1';
+            }, 100);
+        });
+    </script>
+</body>
+</html>
