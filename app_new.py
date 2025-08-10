@@ -2270,7 +2270,7 @@ ADD_TEMPLATE = '''
         
         // ID 재정렬 기능
         function reindexIds() {
-            if (confirm('현재 모든 자재요청의 ID를 #1부터 순차적으로 재정렬하시겠습니까?\n\n주의: 이 작업은 모든 데이터를 재구성하므로 시간이 걸릴 수 있습니다.')) {
+            if (confirm(`현재 모든 자재요청의 ID를 #1부터 순차적으로 재정렬하시겠습니까?\n\n주의: 이 작업은 모든 데이터를 재구성하므로 시간이 걸릴 수 있습니다.`)) {
                 const button = document.querySelector('.reindex-btn');
                 if (button) {
                     button.disabled = true;
