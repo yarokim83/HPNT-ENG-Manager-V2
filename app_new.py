@@ -46,12 +46,26 @@ def get_app_version():
     """앱 버전 반환 (캐시 무효화용)"""
     return APP_VERSION
 
+# Gunicorn 환경에서 __main__ 블록이 실행되지 않으므로 최초 요청 시 DB 초기화 보장
+@app.before_first_request
+def _ensure_db_initialized():
+    try:
+        if init_material_database():
+            logger.info("✅ DB 초기화 확인/완료(before_first_request)")
+    except Exception as e:
+        logger.warning(f"⚠️ DB 초기화 시도 실패(before_first_request): {e}")
+
 # PostgreSQL 사용 여부 감지 (Railway 등)
 DATABASE_URL = os.environ.get('DATABASE_URL')
 USE_POSTGRES = bool(DATABASE_URL)
 
 # sqlite3 스타일의 '?' 플레이스홀더를 psycopg2의 '%s'로 변환하는 어댑터
 _qmark_pattern = re.compile(r"\?")
+# 진단 로그: Render/Railway 등에서 환경변수 주입 여부 확인
+try:
+    logger.info(f"USE_POSTGRES={USE_POSTGRES}, DATABASE_URL set={'yes' if DATABASE_URL else 'no'}")
+except Exception:
+    pass
 
 class _PgCursorAdapter:
     def __init__(self, cursor):
@@ -3264,6 +3278,33 @@ def api_stats():
 def stats_page():
     """통계 페이지"""
     return "<h1>📊 통계</h1><p>곧 구현될 예정입니다!</p><a href='/'>← 홈으로</a>"
+
+@app.route('/health')
+def health():
+    return "ok", 200
+
+@app.route('/env')
+def env_info():
+    try:
+        from urllib.parse import urlparse
+    except Exception:
+        urlparse = None
+    host = None
+    scheme = None
+    try:
+        if DATABASE_URL and urlparse:
+            p = urlparse(DATABASE_URL)
+            host = p.hostname
+            scheme = p.scheme
+    except Exception:
+        pass
+    return jsonify({
+        'use_postgres': USE_POSTGRES,
+        'has_database_url': bool(DATABASE_URL),
+        'db_scheme': scheme,
+        'db_host': host,
+        'environment': detect_environment(),
+    })
 
 
 if __name__ == '__main__':
