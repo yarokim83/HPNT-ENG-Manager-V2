@@ -523,76 +523,7 @@ HOME_TEMPLATE = '''
                 transform: translateY(0);
             }
         }
-
-        // Inline Edit via Double-Click
-        function startEdit(requestId) {
-            try {
-                // Double invocation guard to prevent prompts appearing twice
-                if (window.__isEditing) {
-                    return;
-                }
-                window.__isEditing = true;
-                const cleanup = () => { window.__isEditing = false; };
-
-                const nameEl = document.getElementById('item-name-' + requestId);
-                const qtyEl = document.getElementById('quantity-' + requestId);
-                const specsEl = document.getElementById('specs-' + requestId);
-                const reasonEl = document.getElementById('reason-' + requestId);
-
-                const currentName = nameEl ? nameEl.textContent.trim() : '';
-                const currentQty = qtyEl ? qtyEl.textContent.trim() : '1';
-                const currentSpecs = specsEl ? specsEl.textContent.trim() : '';
-                const currentReason = reasonEl ? reasonEl.textContent.trim() : '';
-
-                const newName = prompt('자재명을 입력하세요:', currentName);
-                if (newName === null) { cleanup(); return; } // 취소
-                let newQty = prompt('수량을 입력하세요:', currentQty);
-                if (newQty === null) { cleanup(); return; } // 취소
-                newQty = String(newQty).trim();
-                if (!/^\d+$/.test(newQty)) {
-                    alert('수량은 숫자만 입력 가능합니다.');
-                    cleanup();
-                    return;
-                }
-                const newSpecs = prompt('사양(옵션)을 입력하세요:', currentSpecs);
-                if (newSpecs === null) { cleanup(); return; } // 취소
-                const newReason = prompt('사유(옵션)를 입력하세요:', currentReason);
-                if (newReason === null) { cleanup(); return; } // 취소
-
-                fetch('/admin/edit/' + requestId, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        item_name: newName.trim(),
-                        quantity: parseInt(newQty, 10),
-                        specifications: (newSpecs || '').trim(),
-                        reason: (newReason || '').trim()
-                    })
-                })
-                .then(r => r.json())
-                .then(d => {
-                    if (d.success) {
-                        // 페이지 새로고침 대신 해당 카드 내용만 업데이트
-                        if (nameEl) nameEl.textContent = newName.trim();
-                        if (qtyEl) qtyEl.textContent = newQty;
-                        if (specsEl) specsEl.textContent = (newSpecs || '').trim();
-                        if (reasonEl) reasonEl.textContent = (newReason || '').trim();
-                        alert('수정되었습니다.');
-                    } else {
-                        alert('수정 실패: ' + (d.error || '알 수 없는 오류'));
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    alert('수정 중 오류가 발생했습니다.');
-                })
-                .finally(() => { cleanup(); });
-            } catch (e) {
-                console.error(e);
-                alert('수정 준비 중 오류가 발생했습니다.');
-                try { window.__isEditing = false; } catch (ignored) {}
-            }
-        }
+        /* startEdit moved to <script> */
 
         @keyframes scaleIn {
             from {
@@ -673,6 +604,95 @@ HOME_TEMPLATE = '''
             }
         }
     </style>
+    <script>
+    // Inline Edit via Double-Click (now inside <script>)
+    (function(){
+        window.startEdit = function(requestId) {
+            try {
+                if (window.__isEditing) {
+                    console.debug('[startEdit] blocked by global isEditing flag for id=', requestId);
+                    return;
+                }
+                window.__editCooldown = window.__editCooldown || {};
+                const now = Date.now();
+                const last = window.__editCooldown[requestId] || 0;
+                if (now - last < 1500) {
+                    console.debug('[startEdit] blocked by cooldown for id=', requestId, 'delta=', now - last);
+                    return;
+                }
+                window.__editCooldown[requestId] = now;
+                window.__isEditing = true;
+                const cleanup = () => {
+                    setTimeout(() => {
+                        window.__isEditing = false;
+                        console.debug('[startEdit] edit lock released for id=', requestId);
+                    }, 600);
+                };
+
+                const nameEl = document.getElementById('item-name-' + requestId);
+                const qtyEl = document.getElementById('quantity-' + requestId);
+                const specsEl = document.getElementById('specs-' + requestId);
+                const reasonEl = document.getElementById('reason-' + requestId);
+
+                const currentName = nameEl ? nameEl.textContent.trim() : '';
+                const currentQty = qtyEl ? qtyEl.textContent.trim() : '1';
+                const currentSpecs = specsEl ? specsEl.textContent.trim() : '';
+                const currentReason = reasonEl ? reasonEl.textContent.trim() : '';
+
+                const newName = prompt('자재명을 입력하세요:', currentName);
+                if (newName === null) { cleanup(); return; }
+                let newQty = prompt('수량을 입력하세요:', currentQty);
+                if (newQty === null) { cleanup(); return; }
+                newQty = String(newQty).trim();
+                if (!/^\d+$/.test(newQty)) {
+                    alert('수량은 숫자만 입력 가능합니다.');
+                    cleanup();
+                    return;
+                }
+                const newSpecs = prompt('사양(옵션)을 입력하세요:', currentSpecs);
+                if (newSpecs === null) { cleanup(); return; }
+                const newReason = prompt('사유(옵션)를 입력하세요:', currentReason);
+                if (newReason === null) { cleanup(); return; }
+
+                fetch('/admin/edit/' + requestId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_name: newName.trim(),
+                        quantity: parseInt(newQty, 10),
+                        specifications: (newSpecs || '').trim(),
+                        reason: (newReason || '').trim()
+                    })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) {
+                        if (nameEl) nameEl.textContent = newName.trim();
+                        if (qtyEl) qtyEl.textContent = newQty;
+                        if (specsEl) specsEl.textContent = (newSpecs || '').trim();
+                        if (reasonEl) reasonEl.textContent = (newReason || '').trim();
+                        alert('수정되었습니다.');
+                        console.debug('[startEdit] updated DOM for id=', requestId);
+                    } else {
+                        alert('수정 실패: ' + (d.error || '알 수 없는 오류'));
+                        console.warn('[startEdit] server reported failure for id=', requestId, d);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('수정 중 오류가 발생했습니다.');
+                })
+                .finally(() => { cleanup(); });
+            } catch (e) {
+                console.error(e);
+                alert('수정 준비 중 오류가 발생했습니다.');
+                try {
+                    setTimeout(() => { window.__isEditing = false; }, 600);
+                } catch (ignored) {}
+            }
+        }
+    })();
+    </script>
 </head>
 <body>
     <!-- Dynamic Island -->
