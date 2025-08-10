@@ -46,14 +46,26 @@ def get_app_version():
     """앱 버전 반환 (캐시 무효화용)"""
     return APP_VERSION
 
-# Gunicorn 환경에서 __main__ 블록이 실행되지 않으므로 최초 요청 시 DB 초기화 보장
-@app.before_first_request
-def _ensure_db_initialized():
-    try:
-        if init_material_database():
-            logger.info("✅ DB 초기화 확인/완료(before_first_request)")
-    except Exception as e:
-        logger.warning(f"⚠️ DB 초기화 시도 실패(before_first_request): {e}")
+# Gunicorn 환경에서 __main__ 블록이 실행되지 않을 수 있어, 최초 요청에 1회 DB 초기화 보장
+import threading as _th
+_DB_INIT_DONE = False
+_DB_INIT_LOCK = _th.Lock()
+
+@app.before_request
+def _ensure_db_initialized_once():
+    global _DB_INIT_DONE
+    if _DB_INIT_DONE:
+        return
+    with _DB_INIT_LOCK:
+        if _DB_INIT_DONE:
+            return
+        try:
+            if init_material_database():
+                logger.info("✅ DB 초기화 확인/완료(before_request once)")
+            _DB_INIT_DONE = True
+        except Exception as e:
+            logger.warning(f"⚠️ DB 초기화 시도 실패(before_request once): {e}")
+            # 실패해도 요청 처리는 계속 진행
 
 # PostgreSQL 사용 여부 감지 (Railway 등)
 DATABASE_URL = os.environ.get('DATABASE_URL')
