@@ -77,15 +77,18 @@ def _ensure_db_initialized_once():
             logger.warning(f"⚠️ DB 초기화 시도 실패(before_request once): {e}")
             # 실패해도 요청 처리는 계속 진행
 
-# PostgreSQL 사용 여부 감지 (Railway 등)
+# PostgreSQL 사용 여부 감지 (Render/Neon 등)
 DATABASE_URL = os.environ.get('DATABASE_URL')
-USE_POSTGRES = bool(DATABASE_URL)
+# 강제 PostgreSQL 모드: 설정 시 어떤 경우에도 SQLite로 폴백하지 않음
+_truthy = {"1", "true", "True", "yes", "on"}
+FORCE_POSTGRES = str(os.environ.get('FORCE_POSTGRES', '')).strip() in _truthy
+USE_POSTGRES = FORCE_POSTGRES or bool(DATABASE_URL)
 
 # sqlite3 스타일의 '?' 플레이스홀더를 psycopg2의 '%s'로 변환하는 어댑터
 _qmark_pattern = re.compile(r"\?")
 # 진단 로그: Render/Railway 등에서 환경변수 주입 여부 확인
 try:
-    logger.info(f"USE_POSTGRES={USE_POSTGRES}, DATABASE_URL set={'yes' if DATABASE_URL else 'no'}")
+    logger.info(f"USE_POSTGRES={USE_POSTGRES}, FORCE_POSTGRES={FORCE_POSTGRES}, DATABASE_URL set={'yes' if DATABASE_URL else 'no'}")
 except Exception:
     pass
 
@@ -142,15 +145,23 @@ class _PgConnectionAdapter:
         return False
 
 def _pg_connect_from_env():
-    # DATABASE_URL은 Railway에서 제공 (postgres:// 또는 postgresql://)
+    """환경변수에서 PostgreSQL 연결 생성 (강제 모드 지원)"""
+    # DATABASE_URL은 Render/Neon 등에서 제공 (postgres:// 또는 postgresql://)
     if psycopg2 is None:
-        raise ImportError("psycopg2가 설치되어 있지 않습니다. 로컬에서 PostgreSQL 연결을 사용하려면 'python -m pip install psycopg2-binary'로 설치하세요.")
-    conn = psycopg2.connect(DATABASE_URL)
-    return _PgConnectionAdapter(conn)
+        raise ImportError("psycopg2가 설치되어 있지 않습니다. PostgreSQL 연결을 사용하려면 'psycopg2-binary'가 필요합니다.")
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL이 설정되지 않았습니다. FORCE_POSTGRES가 켜져 있으면 반드시 설정되어야 합니다.")
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        return _PgConnectionAdapter(conn)
+    except Exception as e:
+        # 강제 모드에서는 실패를 숨기지 않음
+        raise
 
 # sqlite3.connect를 그대로 쓰는 기존 코드들을 변경하지 않기 위해 런타임 패치
 _real_sqlite_connect = sqlite3.connect
 def _smart_connect(db_path):
+    # 강제 모드면 반드시 PostgreSQL만 사용
     if USE_POSTGRES:
         return _pg_connect_from_env()
     return _real_sqlite_connect(db_path)
@@ -317,7 +328,63 @@ def restore_db_from_backup(backup_data):
         return False
 
 def init_material_database():
-    """자재관리 데이터베이스 초기화 - SQLite"""
+    """자재관리 DB 초기화 (PostgreSQL 우선, 필요 시 SQLite)"""
+    if USE_POSTGRES:
+        # PostgreSQL 경로: 로컬 경로/파일 로그를 남기지 않음
+        try:
+            conn = _pg_connect_from_env()
+            cursor = conn.cursor()
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS material_requests (
+                id SERIAL PRIMARY KEY,
+                item_name TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                specifications TEXT,
+                reason TEXT,
+                urgency TEXT NOT NULL DEFAULT 'normal',
+                request_date TEXT NOT NULL,
+                vendor TEXT,
+                status TEXT DEFAULT 'pending',
+                images TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            ''')
+
+            # 샘플 데이터 삽입(비어있을 때만)
+            insert_sample_data = True
+            if insert_sample_data:
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM material_requests")
+                    row_count = cursor.fetchone()[0]
+                except Exception as e:
+                    logger.warning(f"샘플 데이터 카운트 확인 실패(PostgreSQL): {e}")
+                    row_count = 0
+                if row_count == 0:
+                    logger.info("📝 (PG) 샘플 데이터 자동 삽입 시작")
+                    sample_data = [
+                        ('안전모', 10, '흰색, CE 인증', '현장 안전 강화를 위해 필요', 'high', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                        ('작업장갑', 20, '면장갑, L사이즈', '작업자 보호용', 'normal', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                        ('전선', 3, '2.5sq, 100m', '전기 배선 작업용', 'normal', '2025-01-05', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                    ]
+                    cursor.executemany('''
+                        INSERT INTO material_requests 
+                        (item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', sample_data)
+                    logger.info(f"✅ (PG) 샘플 데이터 {len(sample_data)}개 자동 삽입 완료")
+
+            conn.commit()
+            conn.close()
+            logger.info("✅ PostgreSQL DB 초기화/확인 완료")
+            return True
+        except Exception as e:
+            # 강제 모드라면 실패를 숨기지 않음 → 예외 그대로 전파
+            logger.error(f"❌ PostgreSQL 초기화 실패: {e}")
+            if FORCE_POSTGRES:
+                raise
+            # 비강제 모드에서는 아래 SQLite로 폴백 가능
+
+    # SQLite 경로 (강제 모드가 아니고, USE_POSTGRES가 False일 때만)
     db_path = get_material_db_path()
     db_exists = os.path.exists(db_path)
     
@@ -332,28 +399,7 @@ def init_material_database():
     
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-
-    # 자재요청 테이블 생성 (환경별 DDL 분기)
-    if USE_POSTGRES:
-        # PostgreSQL 문법
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS material_requests (
-            id SERIAL PRIMARY KEY,
-            item_name TEXT NOT NULL,
-            quantity INTEGER NOT NULL,
-            specifications TEXT,
-            reason TEXT,
-            urgency TEXT NOT NULL DEFAULT 'normal',
-            request_date TEXT NOT NULL,
-            vendor TEXT,
-            status TEXT DEFAULT 'pending',
-            images TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        ''')
-    else:
-        # SQLite 문법
-        cursor.execute('''
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS material_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             item_name TEXT NOT NULL,
@@ -367,45 +413,37 @@ def init_material_database():
             images TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        ''')
+    ''')
     
-    # 샘플 데이터 삽입: 테이블이 비어있을 때만
     insert_sample_data = True
-    
     if db_exists:
         logger.info(f"✅ 기존 자재관리 DB 연결 완료: {db_path}")
     else:
         logger.info(f"✅ 새 자재관리 DB 초기화 완료: {db_path}")
     
-    # 샘플 데이터 삽입 (백업이 없을 때)
     if insert_sample_data:
         try:
             cursor.execute("SELECT COUNT(*) FROM material_requests")
             row_count = cursor.fetchone()[0]
         except Exception as e:
-            logger.warning(f"샘플 데이터 삽입 전 카운트 확인 실패: {e}")
+            logger.warning(f"샘플 데이터 삽입 전 카운트 확인 실패(SQLite): {e}")
             row_count = 0
-        if row_count > 0:
-            logger.info(f"샘플 데이터 삽입 건너뜀: 기존 레코드 {row_count}건 존재")
-        else:
-            logger.info("📝 샘플 데이터 자동 삽입 시작")
+        if row_count == 0:
+            logger.info("📝 (SQLite) 샘플 데이터 자동 삽입 시작")
             sample_data = [
                 ('안전모', 10, '흰색, CE 인증', '현장 안전 강화를 위해 필요', 'high', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
                 ('작업장갑', 20, '면장갑, L사이즈', '작업자 보호용', 'normal', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
                 ('전선', 3, '2.5sq, 100m', '전기 배선 작업용', 'normal', '2025-01-05', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             ]
-            
             cursor.executemany('''
                 INSERT INTO material_requests 
                 (item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', sample_data)
-            
-            logger.info(f"✅ 샘플 데이터 {len(sample_data)}개 자동 삽입 완료")
+            logger.info(f"✅ (SQLite) 샘플 데이터 {len(sample_data)}개 자동 삽입 완료")
     
     conn.commit()
     conn.close()
-    
     return True
 
 # HTML 템플릿들
