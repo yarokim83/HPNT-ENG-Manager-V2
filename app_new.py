@@ -17,10 +17,20 @@ import base64
 
 import sqlite3
 import re
+# psycopg2 임포트 상태 기록용
+_PSYCOPG2_IMPORT_OK = False
+_PSYCOPG2_IMPORT_ERR = None
 try:
     import psycopg2  # optional: only needed when DATABASE_URL is set
-except Exception:
+    _PSYCOPG2_IMPORT_OK = True
+except Exception as _e:
     psycopg2 = None
+    _PSYCOPG2_IMPORT_OK = False
+    _PSYCOPG2_IMPORT_ERR = str(_e)
+    try:
+        logger.warning(f"psycopg2 import failed: {_PSYCOPG2_IMPORT_ERR}")
+    except Exception:
+        pass
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -3315,6 +3325,8 @@ def env_info():
         'has_database_url': bool(DATABASE_URL),
         'db_scheme': scheme,
         'db_host': host,
+        'psycopg2_import_ok': _PSYCOPG2_IMPORT_OK,
+        'psycopg2_import_err': _PSYCOPG2_IMPORT_ERR,
         'environment': detect_environment(),
     })
 
