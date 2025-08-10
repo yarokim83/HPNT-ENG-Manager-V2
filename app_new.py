@@ -626,6 +626,62 @@ HOME_TEMPLATE = '''
             }
         }
 
+        // Inline Edit via Double-Click
+        function startEdit(requestId) {
+            try {
+                const nameEl = document.getElementById('item-name-' + requestId);
+                const qtyEl = document.getElementById('quantity-' + requestId);
+                const specsEl = document.getElementById('specs-' + requestId);
+                const reasonEl = document.getElementById('reason-' + requestId);
+
+                const currentName = nameEl ? nameEl.textContent.trim() : '';
+                const currentQty = qtyEl ? qtyEl.textContent.trim() : '1';
+                const currentSpecs = specsEl ? specsEl.textContent.trim() : '';
+                const currentReason = reasonEl ? reasonEl.textContent.trim() : '';
+
+                const newName = prompt('자재명을 입력하세요:', currentName);
+                if (newName === null) return; // 취소
+                let newQty = prompt('수량을 입력하세요:', currentQty);
+                if (newQty === null) return; // 취소
+                newQty = String(newQty).trim();
+                if (!/^\d+$/.test(newQty)) {
+                    alert('수량은 숫자만 입력 가능합니다.');
+                    return;
+                }
+                const newSpecs = prompt('사양(옵션)을 입력하세요:', currentSpecs);
+                if (newSpecs === null) return; // 취소
+                const newReason = prompt('사유(옵션)를 입력하세요:', currentReason);
+                if (newReason === null) return; // 취소
+
+                fetch('/admin/edit/' + requestId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_name: newName.trim(),
+                        quantity: parseInt(newQty, 10),
+                        specifications: (newSpecs || '').trim(),
+                        reason: (newReason || '').trim()
+                    })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) {
+                        alert('수정되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('수정 실패: ' + (d.error || '알 수 없는 오류'));
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('수정 중 오류가 발생했습니다.');
+                });
+            } catch (e) {
+                console.error(e);
+                alert('수정 준비 중 오류가 발생했습니다.');
+            }
+        }
+
         @keyframes scaleIn {
             from {
                 opacity: 0;
@@ -1517,9 +1573,10 @@ REQUESTS_TEMPLATE = '''
             <!-- Request Cards -->
             <div class="requests-list">
                 {% for req in requests %}
-                <div class="ios-card ios-fade-in">
-                    <div class="request-header">
-                        <div class="request-title">{{ req[1] }}</div>
+                <div class="ios-card ios-fade-in request-card" data-request-id="{{ req[0] }}" title="더블클릭하여 편집">
+                    <div class="request-header" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                        <div class="request-title" id="item-name-{{ req[0] }}">{{ req[1] }}</div>
+                        <button type="button" class="ios-button ios-button-glass ios-haptic" style="padding:6px 10px; min-height:36px; font-size:14px;" onclick="startEdit({{ req[0] }})">편집</button>
                         <div class="ios-badge ios-badge-{{ req[8] }}">
                             {% if req[8] == 'pending' %}대기중
                             {% elif req[8] == 'approved' %}승인됨
@@ -1533,18 +1590,18 @@ REQUESTS_TEMPLATE = '''
                     <div class="request-details">
                         <div class="detail-item">
                             <span class="detail-label">📦 수량:</span>
-                            <span>{{ req[2] }}개</span>
+                            <span id="quantity-{{ req[0] }}">{{ req[2] }}</span>개
                         </div>
                         {% if req[3] %}
                         <div class="detail-item">
                             <span class="detail-label">📋 사양:</span>
-                            <span>{{ req[3] }}</span>
+                            <span id="specs-{{ req[0] }}">{{ req[3] }}</span>
                         </div>
                         {% endif %}
                         {% if req[4] %}
                         <div class="detail-item">
                             <span class="detail-label">📝 사유:</span>
-                            <span>{{ req[4] }}</span>
+                            <span id="reason-{{ req[0] }}">{{ req[4] }}</span>
                         </div>
                         {% endif %}
                         {% if req[7] %}
@@ -1585,8 +1642,9 @@ REQUESTS_TEMPLATE = '''
                     <div class="request-image">
                         {% if req[9] %}
                         <a href="/images/{{ req[9] }}" target="_blank">
-                            <img src="/images/{{ req[9] }}" class="request-image-thumb" alt="이미지">
+                            <img src="/images/{{ req[9] }}" class="request-image-thumb" alt="이미지" onerror="this.onerror=null; this.replaceWith(document.createTextNode('이미지 로드 실패: {{ req[9] }}'));">
                         </a>
+                        <div class="detail-item" style="margin-top:4px; color:#666; font-size:12px;">파일명: {{ req[9] }}</div>
                         <div class="request-actions" style="margin-top: 8px;">
                             <button type="button" onclick="deleteImage({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">이미지 삭제</button>
                         </div>
@@ -1758,6 +1816,62 @@ REQUESTS_TEMPLATE = '''
             }
         }
 
+        // Inline Edit via Double-Click (REQUESTS page)
+        function startEdit(requestId) {
+            try {
+                const nameEl = document.getElementById('item-name-' + requestId);
+                const qtyEl = document.getElementById('quantity-' + requestId);
+                const specsEl = document.getElementById('specs-' + requestId);
+                const reasonEl = document.getElementById('reason-' + requestId);
+
+                const currentName = nameEl ? nameEl.textContent.trim() : '';
+                const currentQty = qtyEl ? qtyEl.textContent.trim() : '1';
+                const currentSpecs = specsEl ? specsEl.textContent.trim() : '';
+                const currentReason = reasonEl ? reasonEl.textContent.trim() : '';
+
+                const newName = prompt('자재명을 입력하세요:', currentName);
+                if (newName === null) return; // 취소
+                let newQty = prompt('수량을 입력하세요:', currentQty);
+                if (newQty === null) return; // 취소
+                newQty = String(newQty).trim();
+                if (!/^\d+$/.test(newQty)) {
+                    alert('수량은 숫자만 입력 가능합니다.');
+                    return;
+                }
+                const newSpecs = prompt('사양(옵션)을 입력하세요:', currentSpecs);
+                if (newSpecs === null) return; // 취소
+                const newReason = prompt('사유(옵션)를 입력하세요:', currentReason);
+                if (newReason === null) return; // 취소
+
+                fetch('/admin/edit/' + requestId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_name: newName.trim(),
+                        quantity: parseInt(newQty, 10),
+                        specifications: (newSpecs || '').trim(),
+                        reason: (newReason || '').trim()
+                    })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) {
+                        alert('수정되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('수정 실패: ' + (d.error || '알 수 없는 오류'));
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('수정 중 오류가 발생했습니다.');
+                });
+            } catch (e) {
+                console.error(e);
+                alert('수정 준비 중 오류가 발생했습니다.');
+            }
+        }
+
         // Expose functions to global scope for inline handlers
         window.copyRequest = copyRequest;
         window.updateRequest = updateRequest;
@@ -1773,6 +1887,40 @@ REQUESTS_TEMPLATE = '''
             setTimeout(() => {
                 document.body.style.opacity = '1';
             }, 100);
+
+            // Attach double-click handler for inline edit
+            document.querySelectorAll('.request-card').forEach(card => {
+                const rid = card.getAttribute('data-request-id');
+                if (rid) {
+                    card.addEventListener('dblclick', () => startEdit(rid));
+                }
+            });
+
+            // Event delegation fallback (more robust)
+            const list = document.querySelector('.requests-list');
+            if (list) {
+                list.addEventListener('dblclick', (e) => {
+                    const card = e.target && e.target.closest ? e.target.closest('.request-card') : null;
+                    const rid = card && card.getAttribute('data-request-id');
+                    if (rid) startEdit(rid);
+                });
+            }
+
+            // Expose for debugging
+            window.startEdit = startEdit;
+
+            // Long-press support for touch devices
+            let pressTimer = null;
+            document.querySelectorAll('.request-card').forEach(card => {
+                const rid = card.getAttribute('data-request-id');
+                if (!rid) return;
+                card.addEventListener('touchstart', () => {
+                    pressTimer = setTimeout(() => startEdit(rid), 600);
+                }, { passive: true });
+                ['touchend','touchcancel','touchmove'].forEach(evt => {
+                    card.addEventListener(evt, () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, { passive: true });
+                });
+            });
         });
     </script>
 </body>
@@ -1919,7 +2067,7 @@ ADD_TEMPLATE = '''
             <div class="error">{{ error }}</div>
             {% endif %}
             
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST" enctype="multipart/form-data" onsubmit="return validateBeforeSubmit()">
                 <div class="form-group">
                     <label for="item_name">자재명 <span class="required">*</span></label>
                     <input type="text" id="item_name" name="item_name" class="form-control" 
@@ -1936,12 +2084,13 @@ ADD_TEMPLATE = '''
                 
                 <div class="form-group">
                     <label>📷 참고 이미지</label>
-                    <div class="image-paste-area" id="imagePasteArea">
+                    <div class="image-paste-area" id="imagePasteArea" tabindex="0" role="button" aria-label="이미지 붙여넣기 영역">
                         <div class="paste-icon">📋</div>
                         <div class="paste-text">스크린샷을 캡쳐한 후 여기에 붙여넣기 (Ctrl+V)</div>
                         <div class="paste-help">또는 이 영역을 클릭해서 이미지를 붙여넣으세요</div>
                     </div>
                     <div class="image-preview" id="imagePreview" style="display: none;"></div>
+                    <textarea id="pasteCatcher" style="position:fixed; left:-9999px; top:-9999px; width:1px; height:1px; opacity:0;" aria-hidden="true" tabindex="-1"></textarea>
                     <input type="hidden" id="imageData" name="image_data">
                     <div class="form-help">자재의 모습이나 설치 위치 등을 캡쳐해서 붙여넣으면 요청 처리에 도움이 됩니다</div>
                 </div>
@@ -2000,18 +2149,70 @@ ADD_TEMPLATE = '''
         const imagePasteArea = document.getElementById('imagePasteArea');
         const imagePreview = document.getElementById('imagePreview');
         const imageDataInput = document.getElementById('imageData');
+        const pasteCatcher = document.getElementById('pasteCatcher');
         
         // 클립보드에서 이미지 붙여넣기
         function handlePaste(e) {
-            const items = e.clipboardData.items;
-            
+            const cd = e.clipboardData;
+            if (!cd) return;
+            const items = cd.items || [];
+            let handled = false;
+
+            // 1) 표준 image item 처리
             for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
-                    e.preventDefault();
+                if (items[i] && items[i].type && items[i].type.indexOf('image') !== -1) {
+                    e.preventDefault(); // contenteditable 기본 삽입 방지
                     const blob = items[i].getAsFile();
-                    handleImageFile(blob);
+                    if (blob) handleImageFile(blob);
+                    handled = true;
                     break;
                 }
+            }
+
+            // 2) Fallback: clipboardData.files
+            if (!handled && cd.files && cd.files.length > 0) {
+                const file = cd.files[0];
+                if (file && file.type && file.type.startsWith('image/')) {
+                    e.preventDefault();
+                    handleImageFile(file);
+                    handled = true;
+                }
+            }
+
+            // 3) Fallback: text/html 안의 <img src="data:image/..."> 처리
+            if (!handled) {
+                const html = cd.getData && cd.getData('text/html');
+                if (html && html.indexOf('data:image') !== -1) {
+                    try {
+                        const m = html.match(/<img[^>]+src=["'](data:image\/[a-zA-Z0-9+.-]+;base64,[^"']+)["']/i);
+                        if (m && m[1]) {
+                            e.preventDefault();
+                            // 프리뷰와 hidden 입력에 직접 세팅
+                            const dataUrl = m[1];
+                            imagePreview.innerHTML = `
+                                <img src="${dataUrl}" class="preview-image" alt="미리보기">
+                                <div class="image-info">
+                                    📁 파일명: 붙여넣기 이미지<br>
+                                    🖼️ 형식: data URL
+                                </div>
+                                <button type="button" class="remove-image" onclick="removeImage()">🗑️ 이미지 제거</button>
+                            `;
+                            imagePreview.style.display = 'block';
+                            imageDataInput.value = dataUrl;
+                            imagePasteArea.style.display = 'none';
+                            handled = true;
+                        }
+                    } catch (_) {}
+                }
+            }
+
+            // contenteditable 영역 내부에 브라우저가 노드를 삽입하지 않도록 정리
+            if (handled) {
+                imagePasteArea.innerHTML = `
+                    <div class="paste-icon">📋</div>
+                    <div class="paste-text">스크린샷을 캡쳐한 후 여기에 붙여넣기 (Ctrl+V)</div>
+                    <div class="paste-help">또는 이 영역을 클릭해서 이미지를 붙여넣으세요</div>
+                `;
             }
         }
         
@@ -2054,6 +2255,17 @@ ADD_TEMPLATE = '''
             imageDataInput.value = '';
             imagePasteArea.style.display = 'block';
         }
+
+        // 제출 전 검증: 미리보기 노출인데 hidden 값이 비어있으면 방지
+        function validateBeforeSubmit() {
+            const previewVisible = imagePreview.style.display !== 'none' && imagePreview.innerHTML.trim() !== '';
+            const hasData = imageDataInput.value && imageDataInput.value.startsWith('data:image/');
+            if (previewVisible && !hasData) {
+                alert('이미지 미리보기는 보이지만 데이터가 비어 있습니다. 다시 붙여넣기 후 시도해주세요.');
+                return false;
+            }
+            return true;
+        }
         
         // ID 재정렬 기능
         function reindexIds() {
@@ -2090,10 +2302,29 @@ ADD_TEMPLATE = '''
         }
         
         // 이벤트 리스너 등록
-        document.addEventListener('paste', handlePaste);
+        // 전역 캡처 단계에서 paste를 가로채어, 폼 필드 외에서는 기본 삽입을 차단하고 우리 로직만 수행
+        document.addEventListener('paste', function(e){
+            const t = e.target;
+            const tag = (t && t.tagName) ? t.tagName.toUpperCase() : '';
+            const isFormField = tag === 'INPUT' || tag === 'TEXTAREA' || (t && t.isContentEditable);
+            if (!isFormField) {
+                e.preventDefault();
+                handlePaste(e);
+            }
+        }, true);
+        // contenteditable이 아니므로, 항상 기본 동작 차단 후 우리 로직 수행
+        imagePasteArea.addEventListener('paste', function(e){
+            e.preventDefault();
+            handlePaste(e);
+        });
+        imagePasteArea.addEventListener('beforeinput', function(e){
+            if (e.inputType === 'insertFromPaste') {
+                e.preventDefault();
+            }
+        });
         imagePasteArea.addEventListener('click', function() {
-            // 클릭 시 포커스를 주어 붙여넣기가 가능하도록
-            this.focus();
+            // 클릭 시 숨김 textarea에 포커스 -> 클립보드 이벤트 수신
+            if (pasteCatcher) pasteCatcher.focus();
         });
         
         // 드래그 앤 드롭 방지 (붙여넣기만 허용)
@@ -2292,6 +2523,10 @@ def add_page():
             reason = request.form.get('reason', '').strip()
             vendor = request.form.get('vendor', '').strip()
             image_data = request.form.get('image_data', '').strip()
+            try:
+                logger.info(f"[ADD] image_data len={len(image_data)} head={image_data[:30] if image_data else ''}")
+            except Exception:
+                pass
             
             if not item_name:
                 return render_template_string(ADD_TEMPLATE, error="자재명은 필수 입력 항목입니다.", get_app_version=get_app_version)
@@ -2309,6 +2544,7 @@ def add_page():
                     
                     # 이미지 저장 폴더 생성 (OneDrive 연동)
                     images_dir = get_images_dir_path()
+                    logger.info(f"[ADD] images_dir={images_dir}")
                     
                     # 고유한 파일명 생성 (타임스탬프 + 자재명)
                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -2321,12 +2557,17 @@ def add_page():
                     with open(image_path, 'wb') as f:
                         f.write(base64.b64decode(encoded))
                     
-                    logger.info(f"이미지 저장 완료: {image_filename}")
+                    logger.info(f"[ADD] 이미지 저장 완료: {image_filename} size={len(encoded)}B (base64)")
                     
                 except Exception as img_error:
-                    logger.warning(f"이미지 저장 실패: {img_error}")
+                    logger.warning(f"[ADD] 이미지 저장 실패: {img_error}")
                     # 이미지 저장 실패해도 요청 등록은 계속 진행
                     image_filename = None
+            else:
+                if image_data:
+                    logger.warning("[ADD] image_data는 존재하지만 data:image/로 시작하지 않음")
+                else:
+                    logger.info("[ADD] image_data 비어 있음 (이미지 없음)")
             
             # 데이터베이스에 자재요청 추가
             if USE_POSTGRES:
@@ -2356,10 +2597,19 @@ def add_page():
                     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
                 ''', (item_name, quantity, specifications, reason, urgency, datetime.now().strftime('%Y-%m-%d'), vendor, image_filename))
                 
+                inserted_id = cursor.lastrowid
                 conn.commit()
-                conn.close()
+                try:
+                    # Verify saved images value
+                    cursor.execute('SELECT images FROM material_requests WHERE id = ?', (inserted_id,))
+                    saved_img = cursor.fetchone()
+                    logger.info(f"[ADD] INSERTED id={inserted_id}, images_in_db={saved_img[0] if saved_img else None}")
+                except Exception as verify_err:
+                    logger.warning(f"[ADD] INSERT verify read failed: {verify_err}")
+                finally:
+                    conn.close()
             
-            logger.info(f"새 자재요청 등록: {item_name} x {quantity} (이미지: {'있음' if image_filename else '없음'})")
+            logger.info(f"[ADD] 새 자재요청 등록: {item_name} x {quantity} (이미지: {'있음' if image_filename else '없음'}) 저장된파일명={image_filename}")
             return redirect('/requests')
             
         except ValueError:
@@ -2371,6 +2621,10 @@ def add_page():
     return render_template_string(ADD_TEMPLATE, get_app_version=get_app_version)
 
 # 중복된 통계 페이지 라우트 제거 (아래에서 이미 정의됨)
+@app.route('/favicon.ico')
+def favicon():
+    """브라우저 파비콘 요청 404 방지 (아이콘 미제공시 204 반환)"""
+    return "", 204
 
 @app.route('/images/<filename>')
 def serve_image(filename):
