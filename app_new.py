@@ -1505,10 +1505,10 @@ REQUESTS_TEMPLATE = '''
             <!-- Request Cards -->
             <div class="requests-list">
                 {% for req in requests %}
-                <div class="ios-card ios-fade-in request-card" data-request-id="{{ req[0] }}" title="더블클릭하여 편집">
+                <div class="ios-card ios-fade-in request-card" data-request-id="{{ req[0] }}" title="상단 편집 버튼으로 수정">
                     <div class="request-header" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
                         <div class="request-title" id="item-name-{{ req[0] }}">{{ req[1] }}</div>
-                        <button type="button" class="ios-button ios-button-glass ios-haptic" style="padding:6px 10px; min-height:36px; font-size:14px;" onclick="startEdit({{ req[0] }})">편집</button>
+                        <button type="button" class="ios-button ios-button-glass ios-haptic" style="padding:6px 10px; min-height:36px; font-size:14px;" onclick="startEdit({{ req[0] }})" ondblclick="event.preventDefault(); event.stopPropagation(); return false;">편집</button>
                         <div class="ios-badge ios-badge-{{ req[8] }}">
                             {% if req[8] == 'pending' %}대기중
                             {% elif req[8] == 'approved' %}승인됨
@@ -1748,9 +1748,23 @@ REQUESTS_TEMPLATE = '''
             }
         }
 
-        // Inline Edit via Double-Click (REQUESTS page)
+        // Edit via Button Only (REQUESTS page)
         function startEdit(requestId) {
             try {
+                // re-entrancy and dblclick guard
+                if (window.__isEditing) {
+                    return;
+                }
+                window.__editCooldown = window.__editCooldown || {};
+                const now = Date.now();
+                const last = window.__editCooldown[requestId] || 0;
+                if (now - last < 1200) {
+                    return;
+                }
+                window.__editCooldown[requestId] = now;
+                window.__isEditing = true;
+                const release = () => setTimeout(() => { window.__isEditing = false; }, 500);
+
                 const nameEl = document.getElementById('item-name-' + requestId);
                 const qtyEl = document.getElementById('quantity-' + requestId);
                 const specsEl = document.getElementById('specs-' + requestId);
@@ -1762,18 +1776,19 @@ REQUESTS_TEMPLATE = '''
                 const currentReason = reasonEl ? reasonEl.textContent.trim() : '';
 
                 const newName = prompt('자재명을 입력하세요:', currentName);
-                if (newName === null) return; // 취소
+                if (newName === null) { release(); return; }
                 let newQty = prompt('수량을 입력하세요:', currentQty);
-                if (newQty === null) return; // 취소
+                if (newQty === null) { release(); return; }
                 newQty = String(newQty).trim();
                 if (!/^\d+$/.test(newQty)) {
                     alert('수량은 숫자만 입력 가능합니다.');
+                    release();
                     return;
                 }
                 const newSpecs = prompt('사양(옵션)을 입력하세요:', currentSpecs);
-                if (newSpecs === null) return; // 취소
+                if (newSpecs === null) { release(); return; }
                 const newReason = prompt('사유(옵션)를 입력하세요:', currentReason);
-                if (newReason === null) return; // 취소
+                if (newReason === null) { release(); return; }
 
                 fetch('/admin/edit/' + requestId, {
                     method: 'POST',
@@ -1788,8 +1803,11 @@ REQUESTS_TEMPLATE = '''
                 .then(r => r.json())
                 .then(d => {
                     if (d.success) {
+                        if (nameEl) nameEl.textContent = newName.trim();
+                        if (qtyEl) qtyEl.textContent = newQty;
+                        if (specsEl) specsEl.textContent = (newSpecs || '').trim();
+                        if (reasonEl) reasonEl.textContent = (newReason || '').trim();
                         alert('수정되었습니다.');
-                        location.reload();
                     } else {
                         alert('수정 실패: ' + (d.error || '알 수 없는 오류'));
                     }
@@ -1797,9 +1815,11 @@ REQUESTS_TEMPLATE = '''
                 .catch(err => {
                     console.error(err);
                     alert('수정 중 오류가 발생했습니다.');
-                });
+                })
+                .finally(() => { release(); });
             } catch (e) {
                 console.error(e);
+                setTimeout(() => { try { window.__isEditing = false; } catch(_){} }, 500);
                 alert('수정 준비 중 오류가 발생했습니다.');
             }
         }
@@ -1820,39 +1840,26 @@ REQUESTS_TEMPLATE = '''
                 document.body.style.opacity = '1';
             }, 100);
 
-            // Attach double-click handler for inline edit
-            document.querySelectorAll('.request-card').forEach(card => {
-                const rid = card.getAttribute('data-request-id');
-                if (rid) {
-                    card.addEventListener('dblclick', () => startEdit(rid));
-                }
-            });
-
-            // Event delegation fallback (more robust)
-            const list = document.querySelector('.requests-list');
-            if (list) {
-                list.addEventListener('dblclick', (e) => {
-                    const card = e.target && e.target.closest ? e.target.closest('.request-card') : null;
-                    const rid = card && card.getAttribute('data-request-id');
-                    if (rid) startEdit(rid);
-                });
+            // Block any accidental dblclicks on the list
+            const listEl = document.querySelector('.requests-list');
+            if (listEl) {
+                listEl.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, true);
             }
+
+            // Additionally block dblclicks globally on this page
+            document.addEventListener('dblclick', (e) => {
+                if (e.target && e.target.closest && e.target.closest('.requests-list')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }, true);
 
             // Expose for debugging
             window.startEdit = startEdit;
 
-            // Long-press support for touch devices
-            let pressTimer = null;
-            document.querySelectorAll('.request-card').forEach(card => {
-                const rid = card.getAttribute('data-request-id');
-                if (!rid) return;
-                card.addEventListener('touchstart', () => {
-                    pressTimer = setTimeout(() => startEdit(rid), 600);
-                }, { passive: true });
-                ['touchend','touchcancel','touchmove'].forEach(evt => {
-                    card.addEventListener(evt, () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, { passive: true });
-                });
-            });
         });
     </script>
 </body>
