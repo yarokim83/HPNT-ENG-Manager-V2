@@ -2145,6 +2145,7 @@ ADD_TEMPLATE = '''
     </div>
     
     <script>
+        console.log('[ADD_TEMPLATE] v' + (typeof get_app_version === 'function' ? get_app_version() : 'dev') + ' - 2025-08-10T11:01');
         // 이미지 붙여넣기 기능
         const imagePasteArea = document.getElementById('imagePasteArea');
         const imagePreview = document.getElementById('imagePreview');
