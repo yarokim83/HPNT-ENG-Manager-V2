@@ -984,8 +984,10 @@ HOME_TEMPLATE = '''
                 document.getElementById('completedRequests').textContent = data.completed || 0;
                 
                 // 환경 정보 업데이트
-                document.getElementById('environment').textContent = data.environment || '로컬';
-                document.getElementById('database').textContent = data.database || 'SQLite';
+                const envEl = document.getElementById('environment');
+                if (envEl) envEl.textContent = data.environment || '로컬';
+                const dbEl = document.getElementById('database');
+                if (dbEl) dbEl.textContent = data.database || 'SQLite';
                 
                 showDynamicIsland('✅ 데이터 로드 완료');
             } catch (error) {
@@ -2760,6 +2762,11 @@ def admin_update_request(request_id):
 def reindex_material_request_ids():
     """자재요청 ID를 1번부터 연속적으로 재정렬"""
     try:
+        # PostgreSQL에서는 SERIAL/IDENTITY 시퀀스를 수동으로 재정렬할 필요가 없으며
+        # 아래 로직은 SQLite 전용(sqlite_sequence)을 사용합니다. Postgres에서는 건너뜁니다.
+        if USE_POSTGRES:
+            logger.info("PostgreSQL 환경: ID 재정렬은 생략합니다.")
+            return
         db_path = get_material_db_path()
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -2948,6 +2955,7 @@ def admin_copy_request(request_id):
 def admin_delete_request(request_id):
     """관리자 자재요청 삭제"""
     try:
+        logger.info(f"관리자 삭제 요청 수신: ID={request_id}")
         image_filename = None
         
         # SQLite 사용 (기존 로직)
@@ -2962,6 +2970,7 @@ def admin_delete_request(request_id):
         
         # 자재요청 삭제
         cursor.execute("DELETE FROM material_requests WHERE id = ?", (request_id,))
+        logger.info(f"관리자 삭제 실행: rowcount={cursor.rowcount}")
         
         if cursor.rowcount == 0:
             conn.close()
@@ -2970,8 +2979,9 @@ def admin_delete_request(request_id):
         conn.commit()
         conn.close()
         
-        # SQLite에서만 ID 재정렬 수행
-        reindex_material_request_ids()
+        # SQLite에서만 ID 재정렬 수행 (PostgreSQL은 불필요)
+        if not USE_POSTGRES:
+            reindex_material_request_ids()
         
         # 이미지 파일도 삭제 (OneDrive 연동)
         if image_filename:
@@ -2989,6 +2999,24 @@ def admin_delete_request(request_id):
         
     except Exception as e:
         logger.error(f"관리자 삭제 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/debug/ids', methods=['GET'])
+def admin_debug_ids():
+    """현재 DB의 material_requests ID 목록을 조회 (읽기 전용, 임시 진단용)"""
+    try:
+        conn = sqlite3.connect(get_material_db_path())
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, item_name, status FROM material_requests ORDER BY id LIMIT 100")
+        rows = cursor.fetchall()
+        conn.close()
+        return jsonify({
+            'use_postgres': USE_POSTGRES,
+            'count': len(rows),
+            'rows': rows
+        })
+    except Exception as e:
+        logger.error(f"ID 목록 조회 실패: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Railway 헬스체크용 라우트
@@ -3045,6 +3073,11 @@ from flask import send_file
 def admin_reindex_ids():
     """관리자: ID 재정렬 (#1부터 순차적으로)"""
     try:
+        if USE_POSTGRES:
+            return jsonify({
+                'success': True,
+                'message': 'PostgreSQL 환경에서는 ID 재정렬이 필요하지 않습니다.'
+            })
         # SQLite ID 재정렬
         reindex_material_request_ids()
         return jsonify({
