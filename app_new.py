@@ -3163,6 +3163,18 @@ if __name__ == '__main__':
         port = int(os.environ.get('PORT', 5001))
         host = '0.0.0.0'  # Railway에서는 모든 인터페이스에서 수신해야 함
         
+        # 사전 포트 점유 확인(중복 실행 방지)
+        try:
+            import socket as _sock
+            with _sock.create_connection(("127.0.0.1", port), timeout=0.5) as _s:
+                # 연결에 성공했다는 것은 이미 누군가(아마 이전 인스턴스)가 리슨 중
+                print(f"⚠️ 포트 {port}가 이미 사용 중입니다. 기존 서버 프로세스가 실행 중일 수 있습니다. 새 인스턴스를 시작하지 않습니다.")
+                print("포트를 비우려면 기존 프로세스를 종료하세요. (Windows: netstat/taskkill 또는 Stop-Process)")
+                raise SystemExit(1)
+        except Exception:
+            # 연결 실패면 사용 중이 아님 → 계속 진행
+            pass
+
         print(f"🌐 서버 시작: {host}:{port}")
         print(f"🟢 헬스체크: /health")
         print("=" * 50)
@@ -3171,7 +3183,8 @@ if __name__ == '__main__':
         app.run(
             host=host,
             port=port,
-            debug=False  # 프로덕션 환경에서는 debug=False
+            debug=False,  # 프로덕션 환경에서는 debug=False
+            use_reloader=False
         )
         
     except Exception as startup_error:
