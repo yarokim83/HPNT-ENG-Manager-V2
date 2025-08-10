@@ -374,11 +374,11 @@ HOME_TEMPLATE = '''
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>HPNT Manager V2.0</title>
+    <title>HPNT ENG Manager</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="HPNT Manager">
+    <meta name="apple-mobile-web-app-title" content="HPNT ENG Manager">
     <meta name="theme-color" content="#007AFF">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
@@ -451,6 +451,27 @@ HOME_TEMPLATE = '''
             margin: 20px;
             padding: 0;
             overflow: hidden;
+        }
+
+        /* Request header layout fixes for mobile */
+        .request-header { gap: 8px; }
+        .request-title {
+            flex: 1;
+            min-width: 0; /* allow shrink */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 700;
+        }
+        .request-header .ios-button { flex-shrink: 0; }
+        .request-header .ios-badge { flex-shrink: 0; }
+        @media (max-width: 420px) {
+            .request-header .ios-button {
+                padding: 6px 10px;
+                min-height: 34px;
+                font-size: 13px;
+            }
+            .request-title { max-width: 58vw; }
         }
 
         .ios-button {
@@ -1609,7 +1630,6 @@ REQUESTS_TEMPLATE = '''
                 <div class="ios-card ios-fade-in request-card" data-request-id="{{ req[0] }}" title="상단 편집 버튼으로 수정">
                     <div class="request-header" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
                         <div class="request-title" id="item-name-{{ req[0] }}">{{ req[1] }}</div>
-                        <button type="button" class="ios-button ios-button-glass ios-haptic" style="padding:6px 10px; min-height:36px; font-size:14px;" onclick="startEdit({{ req[0] }})" ondblclick="event.preventDefault(); event.stopPropagation(); return false;">편집</button>
                         <div class="ios-badge ios-badge-{{ req[8] }}">
                             {% if req[8] == 'pending' %}대기중
                             {% elif req[8] == 'approved' %}승인됨
@@ -1618,6 +1638,7 @@ REQUESTS_TEMPLATE = '''
                             {% elif req[8] == 'rejected' %}반려됨
                             {% endif %}
                         </div>
+                        <button type="button" class="ios-button ios-button-glass ios-haptic" style="padding:6px 10px; min-height:36px; font-size:14px;" onclick="startEdit({{ req[0] }})" ondblclick="event.preventDefault(); event.stopPropagation(); return false;">편집</button>
                     </div>
                     
                     <div class="request-details">
