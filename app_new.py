@@ -16,6 +16,8 @@ import logging
 import base64
 
 import sqlite3
+import psycopg2
+import re
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -40,6 +42,80 @@ APP_VERSION = datetime.now().strftime('%Y%m%d_%H%M%S')
 def get_app_version():
     """앱 버전 반환 (캐시 무효화용)"""
     return APP_VERSION
+
+# PostgreSQL 사용 여부 감지 (Railway 등)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+USE_POSTGRES = bool(DATABASE_URL)
+
+# sqlite3 스타일의 '?' 플레이스홀더를 psycopg2의 '%s'로 변환하는 어댑터
+_qmark_pattern = re.compile(r"\?")
+
+class _PgCursorAdapter:
+    def __init__(self, cursor):
+        self._cursor = cursor
+
+    def execute(self, query, params=None):
+        if params is None:
+            return self._cursor.execute(query)
+        # '?'를 '%s'로 치환 (따옴표 내 '?'는 일반적으로 쿼리에서 사용하지 않으므로 단순 변환)
+        converted = _qmark_pattern.sub('%s', query)
+        return self._cursor.execute(converted, params)
+
+    def executemany(self, query, seq_of_params):
+        converted = _qmark_pattern.sub('%s', query)
+        return self._cursor.executemany(converted, seq_of_params)
+
+    def fetchone(self):
+        return self._cursor.fetchone()
+
+    def fetchall(self):
+        return self._cursor.fetchall()
+
+    def __getattr__(self, name):
+        return getattr(self._cursor, name)
+
+class _PgConnectionAdapter:
+    def __init__(self, conn):
+        self._conn = conn
+
+    def cursor(self):
+        return _PgCursorAdapter(self._conn.cursor())
+
+    def commit(self):
+        return self._conn.commit()
+
+    def rollback(self):
+        return self._conn.rollback()
+
+    def close(self):
+        return self._conn.close()
+
+    # sqlite3와의 호환을 위해 context manager 지원
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type:
+            self.rollback()
+        else:
+            self.commit()
+        self.close()
+        return False
+
+def _pg_connect_from_env():
+    # DATABASE_URL은 Railway에서 제공 (postgres:// 또는 postgresql://)
+    conn = psycopg2.connect(DATABASE_URL)
+    return _PgConnectionAdapter(conn)
+
+# sqlite3.connect를 그대로 쓰는 기존 코드들을 변경하지 않기 위해 런타임 패치
+_real_sqlite_connect = sqlite3.connect
+def _smart_connect(db_path):
+    if USE_POSTGRES:
+        return _pg_connect_from_env()
+    return _real_sqlite_connect(db_path)
+
+# 이후 코드의 sqlite3.connect 호출이 자동으로 PostgreSQL을 사용하도록 대체
+sqlite3.connect = _smart_connect
 
 # 환경 감지
 def detect_environment():
@@ -215,25 +291,44 @@ def init_material_database():
     
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+
+    # 자재요청 테이블 생성 (환경별 DDL 분기)
+    if USE_POSTGRES:
+        # PostgreSQL 문법
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS material_requests (
+            id SERIAL PRIMARY KEY,
+            item_name TEXT NOT NULL,
+            quantity INTEGER NOT NULL,
+            specifications TEXT,
+            reason TEXT,
+            urgency TEXT NOT NULL DEFAULT 'normal',
+            request_date TEXT NOT NULL,
+            vendor TEXT,
+            status TEXT DEFAULT 'pending',
+            images TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+    else:
+        # SQLite 문법
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS material_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_name TEXT NOT NULL,
+            quantity INTEGER NOT NULL,
+            specifications TEXT,
+            reason TEXT,
+            urgency TEXT NOT NULL DEFAULT 'normal',
+            request_date TEXT NOT NULL,
+            vendor TEXT,
+            status TEXT DEFAULT 'pending',
+            images TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
     
-    # 자재요청 테이블 생성 (PostgreSQL 스키마와 일치)
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS material_requests (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        item_name TEXT NOT NULL,
-        quantity INTEGER NOT NULL,
-        specifications TEXT,
-        reason TEXT,
-        urgency TEXT NOT NULL DEFAULT 'normal',
-        request_date TEXT NOT NULL,
-        vendor TEXT,
-        status TEXT DEFAULT 'pending',
-        images TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    ''')
-    
-    # 샘플 데이터 삽입
+    # 샘플 데이터 삽입: 테이블이 비어있을 때만
     insert_sample_data = True
     
     if db_exists:
@@ -243,20 +338,29 @@ def init_material_database():
     
     # 샘플 데이터 삽입 (백업이 없을 때)
     if insert_sample_data:
-        logger.info("📝 샘플 데이터 자동 삽입 시작")
-        sample_data = [
-            ('안전모', 10, '흰색, CE 인증', '현장 안전 강화를 위해 필요', 'high', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-            ('작업장갑', 20, '면장갑, L사이즈', '작업자 보호용', 'normal', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-            ('전선', 3, '2.5sq, 100m', '전기 배선 작업용', 'normal', '2025-01-05', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        ]
-        
-        cursor.executemany('''
-            INSERT INTO material_requests 
-            (item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', sample_data)
-        
-        logger.info(f"✅ 샘플 데이터 {len(sample_data)}개 자동 삽입 완료")
+        try:
+            cursor.execute("SELECT COUNT(*) FROM material_requests")
+            row_count = cursor.fetchone()[0]
+        except Exception as e:
+            logger.warning(f"샘플 데이터 삽입 전 카운트 확인 실패: {e}")
+            row_count = 0
+        if row_count > 0:
+            logger.info(f"샘플 데이터 삽입 건너뜀: 기존 레코드 {row_count}건 존재")
+        else:
+            logger.info("📝 샘플 데이터 자동 삽입 시작")
+            sample_data = [
+                ('안전모', 10, '흰색, CE 인증', '현장 안전 강화를 위해 필요', 'high', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                ('작업장갑', 20, '면장갑, L사이즈', '작업자 보호용', 'normal', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                ('전선', 3, '2.5sq, 100m', '전기 배선 작업용', 'normal', '2025-01-05', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            ]
+            
+            cursor.executemany('''
+                INSERT INTO material_requests 
+                (item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', sample_data)
+            
+            logger.info(f"✅ 샘플 데이터 {len(sample_data)}개 자동 삽입 완료")
     
     conn.commit()
     conn.close()
@@ -1437,9 +1541,6 @@ REQUESTS_TEMPLATE = '''
         <!-- iOS 26 Navigation -->
         <div class="ios-nav">
             <h1 class="ios-nav-title">📋 자재요청 목록</h1>
-            <p style="text-align: center; color: rgba(0,0,0,0.6); margin-top: 8px;">
-                등록된 모든 자재요청을 관리하세요
-            </p>
         </div>
         
         <!-- Main Content -->
@@ -3113,7 +3214,7 @@ def api_stats():
             'completed': status_counts.get('completed', 0),
             'in_progress': status_counts.get('in_progress', 0),
             'environment': detect_environment(),
-            'database': 'SQLite'
+            'database': 'PostgreSQL' if USE_POSTGRES else 'SQLite'
         }
         
         conn.close()
