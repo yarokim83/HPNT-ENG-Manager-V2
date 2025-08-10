@@ -16,8 +16,11 @@ import logging
 import base64
 
 import sqlite3
-import psycopg2
 import re
+try:
+    import psycopg2  # optional: only needed when DATABASE_URL is set
+except Exception:
+    psycopg2 = None
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -104,6 +107,8 @@ class _PgConnectionAdapter:
 
 def _pg_connect_from_env():
     # DATABASE_URL은 Railway에서 제공 (postgres:// 또는 postgresql://)
+    if psycopg2 is None:
+        raise ImportError("psycopg2가 설치되어 있지 않습니다. 로컬에서 PostgreSQL 연결을 사용하려면 'python -m pip install psycopg2-binary'로 설치하세요.")
     conn = psycopg2.connect(DATABASE_URL)
     return _PgConnectionAdapter(conn)
 
@@ -374,7 +379,7 @@ HOME_TEMPLATE = '''
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>HPNT ENG Manager</title>
+    <title>HPNT ENG Manager · {{ version }}</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
