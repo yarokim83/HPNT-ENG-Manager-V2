@@ -1664,7 +1664,7 @@ REQUESTS_TEMPLATE = '''
             if (!window.deleteRequest) {
                 window.deleteRequest = function(requestId){
                     try {
-                        if (!confirm('이 요청을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) return;
+                        if (!confirm('이 요청을 삭제하시겠습니까?' + '\\n\\n' + '이 작업은 되돌릴 수 없습니다.')) return;
                         fetch('/admin/delete/' + requestId, {
                             method: 'DELETE',
                             headers: { 'Content-Type': 'application/json' }
@@ -1977,7 +1977,7 @@ REQUESTS_TEMPLATE = '''
 
         // Delete Request Function
         function deleteRequest(requestId) {
-            if (confirm('이 요청을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+            if (confirm('이 요청을 삭제하시겠습니까?' + '\\n\\n' + '이 작업은 되돌릴 수 없습니다.')) {
                 fetch('/admin/delete/' + requestId, {
                     method: 'DELETE',
                     headers: {
