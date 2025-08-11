@@ -196,7 +196,12 @@ def is_cloud_env():
 
 def get_material_db_path():
     """자재관리 DB 경로 결정 - OneDrive 연동"""
-    # 클라우드 환경에서는 기존 로컬 경로 사용
+    # PostgreSQL 사용 시에는 경로/폴더 생성 및 로그를 남기지 않음
+    if USE_POSTGRES:
+        # sqlite3.connect는 어댑터를 통해 PostgreSQL로 대체되므로 경로는 의미 없음
+        return os.environ.get('PG_PLACEHOLDER_PATH', '/tmp/pg.sqlite.placeholder')
+    
+    # 클라우드 환경에서는 앱 디렉토리 하위 db 폴더 사용
     if is_cloud_env():
         if getattr(sys, 'frozen', False):
             current_dir = os.path.dirname(sys.executable)
