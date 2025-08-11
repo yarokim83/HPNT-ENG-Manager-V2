@@ -1610,6 +1610,12 @@ REQUESTS_TEMPLATE = '''
     </style>
 </head>
 <body>
+    <script>
+        // Early safe stubs to avoid ReferenceError if later scripts fail to parse
+        window.updateRequest = window.updateRequest || function(){ alert('페이지 스크립트 로드 오류로 저장을 수행할 수 없습니다. 새로고침 해주세요.'); };
+        window.copyRequest = window.copyRequest || function(){ alert('페이지 스크립트 로드 오류로 복사를 수행할 수 없습니다. 새로고침 해주세요.'); };
+        window.deleteRequest = window.deleteRequest || function(){ alert('페이지 스크립트 로드 오류로 삭제를 수행할 수 없습니다. 새로고침 해주세요.'); };
+    </script>
     <div class="glass-container">
         <!-- iOS 26 Navigation -->
         <div class="ios-nav">
@@ -1815,7 +1821,7 @@ REQUESTS_TEMPLATE = '''
                 fetch('/admin/copy/' + requestId, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     }
                 })
                 .then(response => response.json())
@@ -1908,7 +1914,7 @@ REQUESTS_TEMPLATE = '''
                 fetch('/admin/delete/' + requestId, {
                     method: 'DELETE',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     }
                 })
                 .then(response => response.json())
