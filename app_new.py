@@ -357,7 +357,8 @@ def init_material_database():
             ''')
 
             # 샘플 데이터 삽입(비어있을 때만)
-            insert_sample_data = True
+            # 운영에서는 기본 비활성화. 필요 시 환경변수 INSERT_SAMPLE_DATA=1 로 켭니다.
+            insert_sample_data = os.getenv('INSERT_SAMPLE_DATA', '0') == '1'
             if insert_sample_data:
                 try:
                     cursor.execute("SELECT COUNT(*) FROM material_requests")
@@ -421,7 +422,8 @@ def init_material_database():
         )
     ''')
     
-    insert_sample_data = True
+    # 로컬 개발 편의: INSERT_SAMPLE_DATA=1 일 때만 샘플 삽입
+    insert_sample_data = os.getenv('INSERT_SAMPLE_DATA', '0') == '1'
     if db_exists:
         logger.info(f"✅ 기존 자재관리 DB 연결 완료: {db_path}")
     else:
