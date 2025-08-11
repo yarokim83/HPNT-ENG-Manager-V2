@@ -1043,7 +1043,7 @@ HOME_TEMPLATE = '''
 </html>
 '''
 
-REQUESTS_TEMPLATE = '''
+REQUESTS_TEMPLATE = r'''
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2811,7 +2811,7 @@ def admin_download_db():
             'exported_at': datetime.now().isoformat(),
             'count': len(data),
             'rows': data
-        }, ensure_ascii=False)
+        }, ensure_ascii=False, default=str)
 
         resp = app.response_class(payload, mimetype='application/json; charset=utf-8')
         filename = f"material_requests_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -3292,7 +3292,7 @@ def backup_create():
         backup_data = create_db_backup()
         if backup_data:
             import json
-            backup_json = json.dumps(backup_data, ensure_ascii=False, separators=(',', ':'))
+            backup_json = json.dumps(backup_data, ensure_ascii=False, separators=(',', ':'), default=str)
             
             # HTML 형태로 결과 표시
             html_content = f'''
