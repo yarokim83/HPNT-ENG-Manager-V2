@@ -1825,10 +1825,11 @@ REQUESTS_TEMPLATE = r'''
                     <!-- Image Section -->
                     <div class="request-image">
                         {% if req[9] %}
-                        <a href="/images/{{ req[9] }}" target="_blank">
-                            <img src="/images/{{ req[9] }}" class="request-image-thumb" alt="이미지" onerror="this.onerror=null; this.replaceWith(document.createTextNode('이미지 로드 실패: {{ req[9] }}'));">
+                        {% set img_url = req[9] if req[9].startswith('http') else '/images/' + req[9] %}
+                        <a href="{{ img_url }}" target="_blank">
+                            <img src="{{ img_url }}" class="request-image-thumb" alt="이미지" onerror="this.onerror=null; this.replaceWith(document.createTextNode('이미지 로드 실패: {{ req[9] }}'));">
                         </a>
-                        <div class="detail-item" style="margin-top:4px; color:#666; font-size:12px;">파일명: {{ req[9] }}</div>
+                        <div class="detail-item" style="margin-top:4px; color:#666; font-size:12px;">{{ '이미지 URL' if req[9].startswith('http') else '파일명' }}: {{ req[9] }}</div>
                         <div class="request-actions" style="margin-top: 8px;">
                             <button type="button" onclick="deleteImage({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">이미지 삭제</button>
                         </div>
@@ -1837,6 +1838,10 @@ REQUESTS_TEMPLATE = r'''
                         {% endif %}
                         <div style="margin-top: 8px;">
                             <input type="file" accept="image/*" onchange="onPickImage({{ req[0] }}, this)">
+                        </div>
+                        <div style="margin-top: 8px; display:flex; gap:6px; align-items:center;">
+                            <input id="img-url-{{ req[0] }}" type="url" placeholder="https:// 예) 외부 이미지 URL 붙여넣기" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:8px;">
+                            <button type="button" onclick="setImageUrl({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">외부 URL로 연결</button>
                         </div>
                     </div>
 
@@ -1973,6 +1978,35 @@ REQUESTS_TEMPLATE = r'''
                     console.error(err);
                     alert('삭제 중 오류가 발생했습니다.');
                 });
+        }
+
+        // Set external image URL (S3/GCS/OneDrive public URL)
+        function setImageUrl(requestId) {
+            var input = document.getElementById('img-url-' + requestId);
+            if (!input) return alert('입력 필드를 찾을 수 없습니다.');
+            var url = (input.value || '').trim();
+            if (!url) return alert('URL을 입력해주세요.');
+            if (!(url.startsWith('http://') || url.startsWith('https://'))) {
+                return alert('http/https로 시작하는 올바른 URL을 입력해주세요.');
+            }
+            fetch('/admin/image-url/' + requestId, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    alert('외부 이미지 URL이 저장되었습니다.');
+                    location.reload();
+                } else {
+                    alert('저장 실패: ' + (d.error || '알 수 없는 오류'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('저장 중 오류가 발생했습니다.');
+            });
         }
 
         // Delete Request Function
@@ -2980,10 +3014,12 @@ def admin_edit_image(request_id):
             cursor.execute("SELECT images FROM material_requests WHERE id = ?", (request_id,))
             result = cursor.fetchone()
             if result and result[0]:
-                old_image_path = os.path.join(get_images_dir_path(), result[0])
-                if os.path.exists(old_image_path):
-                    os.remove(old_image_path)
-                    logger.info(f"기존 이미지 삭제: {result[0]}")
+                # 기존 값이 외부 URL이면 파일 삭제 스킵
+                if not (isinstance(result[0], str) and (result[0].startswith('http://') or result[0].startswith('https://'))):
+                    old_image_path = os.path.join(get_images_dir_path(), result[0])
+                    if os.path.exists(old_image_path):
+                        os.remove(old_image_path)
+                        logger.info(f"기존 이미지 삭제: {result[0]}")
             conn.close()
             
             # 새 이미지 파일 저장
@@ -3024,11 +3060,12 @@ def admin_edit_image(request_id):
             if not image_filename:
                 return jsonify({'success': False, 'error': '삭제할 이미지가 없습니다.'}), 400
             
-            # 이미지 파일 삭제
-            image_path = os.path.join(get_images_dir_path(), image_filename)
-            if os.path.exists(image_path):
-                os.remove(image_path)
-                logger.info(f"이미지 파일 삭제: {image_filename}")
+            # 외부 URL이 아닌 경우에만 로컬 파일 삭제
+            if not (isinstance(image_filename, str) and (image_filename.startswith('http://') or image_filename.startswith('https://'))):
+                image_path = os.path.join(get_images_dir_path(), image_filename)
+                if os.path.exists(image_path):
+                    os.remove(image_path)
+                    logger.info(f"이미지 파일 삭제: {image_filename}")
             
             # DB에서 이미지 정보 제거
             db_path = get_material_db_path()
@@ -3046,6 +3083,31 @@ def admin_edit_image(request_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # 중복된 admin_edit_material_info 라우트 제거됨 (다른 위치에 이미 정의되어 있음)
+
+# 외부 이미지 URL 저장 라우트
+@app.route('/admin/image-url/<int:request_id>', methods=['POST'])
+def admin_set_image_url(request_id):
+    """외부 공개 URL(S3/GCS/OneDrive 등)을 images 컬럼에 그대로 저장"""
+    try:
+        data = request.get_json(silent=True) or {}
+        url = (data.get('url') or '').strip()
+        if not url:
+            return jsonify({'success': False, 'error': 'URL이 비어있습니다.'}), 400
+        if not (url.startswith('http://') or url.startswith('https://')):
+            return jsonify({'success': False, 'error': 'http/https URL만 허용됩니다.'}), 400
+
+        # 기존 로컬 파일이 있었다면 정리(옵션): 여기서는 덮어쓰기만 수행, 파일 삭제는 하지 않음
+        db_path = get_material_db_path()
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute('UPDATE material_requests SET images = ? WHERE id = ?', (url, request_id))
+        conn.commit()
+        conn.close()
+        logger.info(f"외부 이미지 URL 저장: ID {request_id} - {url}")
+        return jsonify({'success': True, 'url': url})
+    except Exception as e:
+        logger.error(f"외부 이미지 URL 저장 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/admin/copy/<int:request_id>', methods=['POST'])
 def admin_copy_request(request_id):
