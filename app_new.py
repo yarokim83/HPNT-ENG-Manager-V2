@@ -1611,10 +1611,77 @@ REQUESTS_TEMPLATE = '''
 </head>
 <body>
     <script>
-        // Early safe stubs to avoid ReferenceError if later scripts fail to parse
-        window.updateRequest = window.updateRequest || function(){ alert('페이지 스크립트 로드 오류로 저장을 수행할 수 없습니다. 새로고침 해주세요.'); };
-        window.copyRequest = window.copyRequest || function(){ alert('페이지 스크립트 로드 오류로 복사를 수행할 수 없습니다. 새로고침 해주세요.'); };
-        window.deleteRequest = window.deleteRequest || function(){ alert('페이지 스크립트 로드 오류로 삭제를 수행할 수 없습니다. 새로고침 해주세요.'); };
+        // Early minimal implementations to survive later script parse failures
+        (function(){
+            if (!window.updateRequest) {
+                window.updateRequest = function(requestId){
+                    try {
+                        const vendorEl = document.getElementById('vendor-' + requestId);
+                        const statusEl = document.getElementById('status-' + requestId);
+                        const vendor = vendorEl ? vendorEl.value : '';
+                        const status = statusEl ? statusEl.value : 'pending';
+                        fetch('/admin/update/' + requestId, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ vendor, status })
+                        })
+                        .then(r => r.json())
+                        .then(d => {
+                            if (d && d.success) {
+                                alert('저장되었습니다.');
+                                location.reload();
+                            } else {
+                                alert('저장 실패: ' + ((d && d.error) || '알 수 없는 오류'));
+                            }
+                        })
+                        .catch(err => { console.error(err); alert('저장 중 오류가 발생했습니다.'); });
+                    } catch (e) {
+                        console.error(e);
+                        alert('페이지 스크립트 로드 오류로 저장을 수행할 수 없습니다. 새로고침 해주세요.');
+                    }
+                };
+            }
+            if (!window.copyRequest) {
+                window.copyRequest = function(requestId){
+                    try {
+                        if (!confirm('이 요청을 복사하시겠습니까?')) return;
+                        fetch('/admin/copy/' + requestId, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        })
+                        .then(r => r.json())
+                        .then(d => {
+                            if (d && d.success) { alert('요청이 복사되었습니다!'); location.reload(); }
+                            else { alert('복사 실패: ' + ((d && d.error) || '알 수 없는 오류')); }
+                        })
+                        .catch(err => { console.error(err); alert('복사 중 오류가 발생했습니다.'); });
+                    } catch (e) {
+                        console.error(e);
+                        alert('페이지 스크립트 로드 오류로 복사를 수행할 수 없습니다. 새로고침 해주세요.');
+                    }
+                };
+            }
+            if (!window.deleteRequest) {
+                window.deleteRequest = function(requestId){
+                    try {
+                        if (!confirm('이 요청을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) return;
+                        fetch('/admin/delete/' + requestId, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' }
+                        })
+                        .then(r => r.json())
+                        .then(d => {
+                            if (d && d.success) { alert('요청이 삭제되었습니다!'); location.reload(); }
+                            else { alert('삭제 실패: ' + ((d && d.error) || '알 수 없는 오류')); }
+                        })
+                        .catch(err => { console.error(err); alert('삭제 중 오류가 발생했습니다.'); });
+                    } catch (e) {
+                        console.error(e);
+                        alert('페이지 스크립트 로드 오류로 삭제를 수행할 수 없습니다. 새로고침 해주세요.');
+                    }
+                };
+            }
+        })();
     </script>
     <div class="glass-container">
         <!-- iOS 26 Navigation -->
@@ -1921,7 +1988,7 @@ REQUESTS_TEMPLATE = '''
                 .then(data => {
                     if (data.success) {
                         // 해당 카드만 제거하고, 통계는 비동기 갱신
-                        const card = document.querySelector(`.request-card[data-request-id="${requestId}"]`);
+                        const card = document.querySelector('.request-card[data-request-id="' + requestId + '"]');
                         if (card) card.remove();
                         try {
                             if (typeof loadStats === 'function') {
