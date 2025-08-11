@@ -1921,7 +1921,8 @@ REQUESTS_TEMPLATE = '''
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                }
+                },
+                body: JSON.stringify({})
             })
             .then(response => response.json())
             .then(data => {
@@ -1938,6 +1939,8 @@ REQUESTS_TEMPLATE = '''
             });
         }
     }
+    // Ensure global binding for inline onclick handlers
+    window.copyRequest = copyRequest;
 
     // Update Vendor/Status Inline
     function updateRequest(requestId) {
@@ -1962,6 +1965,8 @@ REQUESTS_TEMPLATE = '''
             alert('저장 중 오류가 발생했습니다.');
         });
     }
+    // Ensure global binding for inline onclick handlers
+    window.updateRequest = updateRequest;
 
     // Image Upload/Delete
     function onPickImage(requestId, inputEl) {
@@ -2041,6 +2046,8 @@ REQUESTS_TEMPLATE = '''
         }
 
         // Edit via Button Only (REQUESTS page)
+        // Ensure global binding for inline onclick handlers
+        window.deleteRequest = deleteRequest;
         function startEdit(requestId) {
             try {
                 // re-entrancy and dblclick guard
