@@ -908,7 +908,7 @@ HOME_TEMPLATE = '''
                 </a>
                 
                 <a href="/stats?v={{ version }}" class="ios-button ios-button-glass ios-haptic">
-                    📊 상세 통계
+                    🆕 신규 기능
                 </a>
             </div>
 
