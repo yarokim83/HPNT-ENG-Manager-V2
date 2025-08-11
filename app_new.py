@@ -1899,155 +1899,48 @@ REQUESTS_TEMPLATE = '''
                 .catch(err => {
                     console.error(err);
                     alert('삭제 중 오류가 발생했습니다.');
-
-<script>
-    // iOS 26 Haptic Feedback Simulation
-    function iosHapticFeedback() {
-        if (navigator.vibrate) {
-            navigator.vibrate(10);
+                });
         }
-    }
 
-    // Add haptic feedback to all interactive elements
-    document.querySelectorAll('.ios-haptic').forEach(element => {
-        element.addEventListener('touchstart', iosHapticFeedback);
-        element.addEventListener('click', iosHapticFeedback);
-    });
-
-    // Copy Request Function
-    function copyRequest(requestId) {
-        if (confirm('이 요청을 복사하시겠습니까?')) {
-            fetch('/admin/copy/' + requestId, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('요청이 복사되었습니다!');
-                    location.reload();
-                } else {
-                    alert('복사 실패: ' + (data.error || '알 수 없는 오류'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('복사 중 오류가 발생했습니다.');
-            });
-        }
-    }
-    // Ensure global binding for inline onclick handlers
-    window.copyRequest = copyRequest;
-
-    // Update Vendor/Status Inline
-    function updateRequest(requestId) {
-        const vendor = document.getElementById('vendor-' + requestId).value;
-        const status = document.getElementById('status-' + requestId).value;
-        fetch('/admin/update/' + requestId, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ vendor, status })
-        })
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) {
-                alert('저장되었습니다.');
-                location.reload();
-            } else {
-                alert('저장 실패: ' + (d.error || '알 수 없는 오류'));
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert('저장 중 오류가 발생했습니다.');
-        });
-    }
-    // Ensure global binding for inline onclick handlers
-    window.updateRequest = updateRequest;
-
-    // Image Upload/Delete
-    function onPickImage(requestId, inputEl) {
-        const file = inputEl.files && inputEl.files[0];
-        if (!file) return;
-        uploadImage(requestId, file);
-    }
-
-    function uploadImage(requestId, file) {
-        const formData = new FormData();
-        formData.append('image', file);
-        fetch('/admin/image/' + requestId, { method: 'POST', body: formData })
-            .then(r => r.json())
-            .then(d => {
-                if (d.success) {
-                    alert('이미지가 업로드되었습니다.');
-                    location.reload();
-                } else {
-                    alert('업로드 실패: ' + (d.error || '알 수 없는 오류'));
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                alert('업로드 중 오류가 발생했습니다.');
-            });
-    }
-
-    function deleteImage(requestId) {
-        if (!confirm('이미지를 삭제하시겠습니까?')) return;
-        fetch('/admin/image/' + requestId, { method: 'DELETE' })
-            .then(r => r.json())
-            .then(d => {
-                if (d.success) {
-                    alert('이미지가 삭제되었습니다.');
-                    location.reload();
-                } else {
-                    alert('삭제 실패: ' + (d.error || '알 수 없는 오류'));
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                alert('삭제 중 오류가 발생했습니다.');
-            });
-    }
-
-    // Delete Request Function
-    function deleteRequest(requestId) {
-        if (confirm('이 요청을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
-            fetch('/admin/delete/' + requestId, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // 해당 카드만 제거하고, 통계는 비동기 갱신
-                    const card = document.querySelector(`.request-card[data-request-id="${requestId}"]`);
-                    if (card) card.remove();
-                    try {
-                        if (typeof loadStats === 'function') {
-                            loadStats();
-                        }
-                    } catch (e) { /* no-op */ }
-                    if (typeof showDynamicIsland === 'function') {
-                        showDynamicIsland('✅ 삭제되었습니다');
-                    } else {
-                        alert('요청이 삭제되었습니다!');
+        // Delete Request Function
+        function deleteRequest(requestId) {
+            if (confirm('이 요청을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+                fetch('/admin/delete/' + requestId, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
                     }
-                } else {
-                    alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 해당 카드만 제거하고, 통계는 비동기 갱신
+                        const card = document.querySelector(`.request-card[data-request-id="${requestId}"]`);
+                        if (card) card.remove();
+                        try {
+                            if (typeof loadStats === 'function') {
+                                loadStats();
+                            }
+                        } catch (e) { /* no-op */ }
+                        if (typeof showDynamicIsland === 'function') {
+                            showDynamicIsland('✅ 삭제되었습니다');
+                        } else {
+                            alert('요청이 삭제되었습니다!');
+                        }
+                    } else {
+                        alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
+                    }
+                })
+                .catch(error => {
                     console.error('Error:', error);
                     alert('삭제 중 오류가 발생했습니다.');
                 });
             }
         }
-
-        // Edit via Button Only (REQUESTS page)
         // Ensure global binding for inline onclick handlers
         window.deleteRequest = deleteRequest;
+
+        // Edit via Button Only (REQUESTS page)
         function startEdit(requestId) {
             try {
                 // re-entrancy and dblclick guard
