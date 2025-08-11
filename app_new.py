@@ -1626,6 +1626,11 @@ REQUESTS_TEMPLATE = '''
                 <a href="/add" class="ios-button ios-button-success ios-haptic">
                     ➕ 새 요청
                 </a>
+                {% if admin_debug %}
+                <a href="/admin/db/download" class="ios-button ios-button-glass ios-haptic" title="DB를 JSON으로 내보내기">
+                    ⬇️ DB 내보내기
+                </a>
+                {% endif %}
                 
                 <form method="GET" style="flex: 1;">
                     <input type="text" name="search" class="ios-input" 
@@ -2654,6 +2659,7 @@ def requests_page():
     try:
         status_filter = request.args.get('status', 'all')
         search_query = request.args.get('search', '')
+        admin_debug = os.getenv('ADMIN_DEBUG', '0') in ('1','true','True')
 
         db_path = get_material_db_path()
         conn = sqlite3.connect(db_path)
@@ -2688,15 +2694,16 @@ def requests_page():
         conn.close()
         
         return render_template_string(REQUESTS_TEMPLATE, 
-                                    requests=requests,
-                                    status_filter=status_filter,
-                                    search_query=search_query,
-                                    status_counts=status_counts,
-                                    total_count=total_count,
-                                    get_app_version=get_app_version)
+                                     requests=requests,
+                                     status_filter=status_filter,
+                                     search_query=search_query,
+                                     status_counts=status_counts,
+                                     total_count=total_count,
+                                     admin_debug=admin_debug,
+                                     get_app_version=get_app_version)
     except Exception as e:
         logger.error(f"자재요청 목록 조회 실패: {e}")
-        return f"<h1>❌ 오류</h1><p>목록을 불러올 수 없습니다: {e}</p><a href='/'>← 홈으로</a>"
+        return f"<h1>❌ 오류</h1><p>목록을 불러올 수 없습니다: {e}</p><a href='/'></a>"
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_page():
@@ -2805,7 +2812,41 @@ def serve_image(filename):
         return send_from_directory(images_dir, filename)
     except Exception as e:
         logger.error(f"이미지 서빙 실패: {e}")
-        return "Image not found", 404
+        return "", 404
+
+@app.route('/admin/db/download', methods=['GET'])
+def admin_download_db():
+    """material_requests 테이블을 JSON 파일로 다운로드 (ADMIN_DEBUG가 켜져 있을 때만)"""
+    admin_debug = os.getenv('ADMIN_DEBUG', '0') in ('1','true','True')
+    if not admin_debug:
+        return "Forbidden", 403
+    try:
+        db_path = get_material_db_path()
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images, created_at
+            FROM material_requests
+            ORDER BY id
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+
+        cols = ['id','item_name','quantity','specifications','reason','urgency','request_date','vendor','status','images','created_at']
+        data = [dict(zip(cols, r)) for r in rows]
+        payload = json.dumps({
+            'exported_at': datetime.now().isoformat(),
+            'count': len(data),
+            'rows': data
+        }, ensure_ascii=False)
+
+        resp = app.response_class(payload, mimetype='application/json; charset=utf-8')
+        filename = f"material_requests_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        resp.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return resp
+    except Exception as e:
+        logger.error(f"DB 내보내기 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/admin/edit/<int:request_id>', methods=['POST'])
 def admin_edit_material_info(request_id):
