@@ -356,29 +356,8 @@ def init_material_database():
             )
             ''')
 
-            # 샘플 데이터 삽입(비어있을 때만)
-            # 운영에서는 기본 비활성화. 필요 시 환경변수 INSERT_SAMPLE_DATA=1 로 켭니다.
-            insert_sample_data = os.getenv('INSERT_SAMPLE_DATA', '0') == '1'
-            if insert_sample_data:
-                try:
-                    cursor.execute("SELECT COUNT(*) FROM material_requests")
-                    row_count = cursor.fetchone()[0]
-                except Exception as e:
-                    logger.warning(f"샘플 데이터 카운트 확인 실패(PostgreSQL): {e}")
-                    row_count = 0
-                if row_count == 0:
-                    logger.info("📝 (PG) 샘플 데이터 자동 삽입 시작")
-                    sample_data = [
-                        ('안전모', 10, '흰색, CE 인증', '현장 안전 강화를 위해 필요', 'high', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                        ('작업장갑', 20, '면장갑, L사이즈', '작업자 보호용', 'normal', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                        ('전선', 3, '2.5sq, 100m', '전기 배선 작업용', 'normal', '2025-01-05', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-                    ]
-                    cursor.executemany('''
-                        INSERT INTO material_requests 
-                        (item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', sample_data)
-                    logger.info(f"✅ (PG) 샘플 데이터 {len(sample_data)}개 자동 삽입 완료")
+            # 샘플 데이터 자동 삽입 제거: 재배포 시 DB가 다시 채워지는 것을 방지
+            # (의도적으로 아무 것도 하지 않음)
 
             conn.commit()
             conn.close()
@@ -422,33 +401,13 @@ def init_material_database():
         )
     ''')
     
-    # 로컬 개발 편의: INSERT_SAMPLE_DATA=1 일 때만 샘플 삽입
-    insert_sample_data = os.getenv('INSERT_SAMPLE_DATA', '0') == '1'
+    # 샘플 데이터 자동 삽입 제거: 재배포 시 DB가 다시 채워지는 것을 방지
     if db_exists:
         logger.info(f"✅ 기존 자재관리 DB 연결 완료: {db_path}")
     else:
         logger.info(f"✅ 새 자재관리 DB 초기화 완료: {db_path}")
     
-    if insert_sample_data:
-        try:
-            cursor.execute("SELECT COUNT(*) FROM material_requests")
-            row_count = cursor.fetchone()[0]
-        except Exception as e:
-            logger.warning(f"샘플 데이터 삽입 전 카운트 확인 실패(SQLite): {e}")
-            row_count = 0
-        if row_count == 0:
-            logger.info("📝 (SQLite) 샘플 데이터 자동 삽입 시작")
-            sample_data = [
-                ('안전모', 10, '흰색, CE 인증', '현장 안전 강화를 위해 필요', 'high', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                ('작업장갑', 20, '면장갑, L사이즈', '작업자 보호용', 'normal', '2025-01-06', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                ('전선', 3, '2.5sq, 100m', '전기 배선 작업용', 'normal', '2025-01-05', '', 'pending', '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-            ]
-            cursor.executemany('''
-                INSERT INTO material_requests 
-                (item_name, quantity, specifications, reason, urgency, request_date, vendor, status, images, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', sample_data)
-            logger.info(f"✅ (SQLite) 샘플 데이터 {len(sample_data)}개 자동 삽입 완료")
+    # (의도적으로 아무 것도 하지 않음)
     
     conn.commit()
     conn.close()
