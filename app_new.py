@@ -83,6 +83,7 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 _truthy = {"1", "true", "True", "yes", "on"}
 FORCE_POSTGRES = str(os.environ.get('FORCE_POSTGRES', '')).strip() in _truthy
 USE_POSTGRES = FORCE_POSTGRES or bool(DATABASE_URL)
+ADMIN_DEBUG = str(os.environ.get('ADMIN_DEBUG', '')).strip() in _truthy
 
 # sqlite3 스타일의 '?' 플레이스홀더를 psycopg2의 '%s'로 변환하는 어댑터
 _qmark_pattern = re.compile(r"\?")
@@ -910,7 +911,7 @@ HOME_TEMPLATE = '''
     <div class="glass-container ios-fade-in">
         <!-- Navigation Header -->
         <div class="ios-nav">
-            <h1 class="ios-nav-title">HPNT Manager</h1>
+            <h1 class="ios-nav-title">HPNT ENG Manager</h1>
         </div>
         
         <!-- Main Content -->
@@ -1021,10 +1022,14 @@ HOME_TEMPLATE = '''
                 const response = await fetch('/api/stats?v={{ version }}');
                 const data = await response.json();
                 
-                document.getElementById('totalRequests').textContent = data.total || 0;
-                document.getElementById('pendingRequests').textContent = data.pending || 0;
-                document.getElementById('inProgressRequests').textContent = data.in_progress || 0;
-                document.getElementById('completedRequests').textContent = data.completed || 0;
+                const totalEl = document.getElementById('totalRequests');
+                if (totalEl) totalEl.textContent = data.total || 0;
+                const pendingEl = document.getElementById('pendingRequests');
+                if (pendingEl) pendingEl.textContent = data.pending || 0;
+                const progEl = document.getElementById('inProgressRequests');
+                if (progEl) progEl.textContent = data.in_progress || 0;
+                const compEl = document.getElementById('completedRequests');
+                if (compEl) compEl.textContent = data.completed || 0;
                 
                 // 환경 정보 업데이트
                 const envEl = document.getElementById('environment');
@@ -1062,7 +1067,7 @@ HOME_TEMPLATE = '''
             
             // 다이나믹 아일랜드 초기 메시지
             setTimeout(() => {
-                showDynamicIsland('HPNT Manager V2.0');
+                showDynamicIsland('HPNT ENG Manager V2.0');
             }, 500);
         });
 
@@ -1713,7 +1718,7 @@ REQUESTS_TEMPLATE = '''
             <!-- Request Cards -->
             <div class="requests-list">
                 {% for req in requests %}
-                <div class="ios-card ios-fade-in request-card" data-request-id="{{ req[0] }}" title="상단 편집 버튼으로 수정">
+                <div class="ios-card ios-fade-in request-card" data-request-id="{{ req[0] }}" data-status="{{ req[8] }}" title="상단 편집 버튼으로 수정">
                     <div class="request-header" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
                         <div class="request-title" id="item-name-{{ req[0] }}">{{ req[1] }}</div>
                         <div class="ios-badge ios-badge-{{ req[8] }}">
@@ -1928,28 +1933,141 @@ REQUESTS_TEMPLATE = '''
                 .catch(err => {
                     console.error(err);
                     alert('삭제 중 오류가 발생했습니다.');
-                });
-        }
 
-        // Delete Request Function
-        function deleteRequest(requestId) {
-            if (confirm('이 요청을 삭제하시겠습니까?\\n\\n이 작업은 되돌릴 수 없습니다.')) {
-                fetch('/admin/delete/' + requestId, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('요청이 삭제되었습니다!');
-                        location.reload();
+<script>
+    // iOS 26 Haptic Feedback Simulation
+    function iosHapticFeedback() {
+        if (navigator.vibrate) {
+            navigator.vibrate(10);
+        }
+    }
+
+    // Add haptic feedback to all interactive elements
+    document.querySelectorAll('.ios-haptic').forEach(element => {
+        element.addEventListener('touchstart', iosHapticFeedback);
+        element.addEventListener('click', iosHapticFeedback);
+    });
+
+    // Copy Request Function
+    function copyRequest(requestId) {
+        if (confirm('이 요청을 복사하시겠습니까?')) {
+            fetch('/admin/copy/' + requestId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('요청이 복사되었습니다!');
+                    location.reload();
+                } else {
+                    alert('복사 실패: ' + (data.error || '알 수 없는 오류'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('복사 중 오류가 발생했습니다.');
+            });
+        }
+    }
+
+    // Update Vendor/Status Inline
+    function updateRequest(requestId) {
+        const vendor = document.getElementById('vendor-' + requestId).value;
+        const status = document.getElementById('status-' + requestId).value;
+        fetch('/admin/update/' + requestId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vendor, status })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert('저장되었습니다.');
+                location.reload();
+            } else {
+                alert('저장 실패: ' + (d.error || '알 수 없는 오류'));
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('저장 중 오류가 발생했습니다.');
+        });
+    }
+
+    // Image Upload/Delete
+    function onPickImage(requestId, inputEl) {
+        const file = inputEl.files && inputEl.files[0];
+        if (!file) return;
+        uploadImage(requestId, file);
+    }
+
+    function uploadImage(requestId, file) {
+        const formData = new FormData();
+        formData.append('image', file);
+        fetch('/admin/image/' + requestId, { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    alert('이미지가 업로드되었습니다.');
+                    location.reload();
+                } else {
+                    alert('업로드 실패: ' + (d.error || '알 수 없는 오류'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('업로드 중 오류가 발생했습니다.');
+            });
+    }
+
+    function deleteImage(requestId) {
+        if (!confirm('이미지를 삭제하시겠습니까?')) return;
+        fetch('/admin/image/' + requestId, { method: 'DELETE' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    alert('이미지가 삭제되었습니다.');
+                    location.reload();
+                } else {
+                    alert('삭제 실패: ' + (d.error || '알 수 없는 오류'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('삭제 중 오류가 발생했습니다.');
+            });
+    }
+
+    // Delete Request Function
+    function deleteRequest(requestId) {
+        if (confirm('이 요청을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+            fetch('/admin/delete/' + requestId, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 해당 카드만 제거하고, 통계는 비동기 갱신
+                    const card = document.querySelector(`.request-card[data-request-id="${requestId}"]`);
+                    if (card) card.remove();
+                    try {
+                        if (typeof loadStats === 'function') {
+                            loadStats();
+                        }
+                    } catch (e) { /* no-op */ }
+                    if (typeof showDynamicIsland === 'function') {
+                        showDynamicIsland('✅ 삭제되었습니다');
                     } else {
-                        alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
+                        alert('요청이 삭제되었습니다!');
                     }
-                })
-                .catch(error => {
+                } else {
+                    alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
                     console.error('Error:', error);
                     alert('삭제 중 오류가 발생했습니다.');
                 });
@@ -3048,6 +3166,8 @@ def admin_delete_request(request_id):
 def admin_debug_ids():
     """현재 DB의 material_requests ID 목록을 조회 (읽기 전용, 임시 진단용)"""
     try:
+        if not ADMIN_DEBUG:
+            return jsonify({'success': False, 'error': 'disabled'}), 403
         conn = sqlite3.connect(get_material_db_path())
         cursor = conn.cursor()
         cursor.execute("SELECT id, item_name, status FROM material_requests ORDER BY id LIMIT 100")
