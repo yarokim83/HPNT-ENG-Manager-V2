@@ -1044,7 +1044,7 @@ HOME_TEMPLATE = '''
 '''
 
 REQUESTS_TEMPLATE = r'''
-<!DOCTYPE html>
+<!DOCTYPE html>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -1728,7 +1728,7 @@ REQUESTS_TEMPLATE = r'''
             <!-- Status Dashboard -->
             <div class="status-dashboard">
                 <div class="status-card status-total ios-scale-in">
-                    <div class="status-number">{{ status_counts.get('total', 0) }}</div>
+                    <div class="status-number">{{ total_count }}</div>
                     <div class="status-label">전체</div>
                 </div>
                 <div class="status-card status-pending ios-scale-in">
