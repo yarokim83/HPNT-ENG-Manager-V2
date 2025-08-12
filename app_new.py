@@ -1683,6 +1683,13 @@ REQUESTS_TEMPLATE = r'''
             }
         })();
     </script>
+    <!-- Image Preview Modal -->
+    <div id="imgPreview" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="position:relative; max-width:95%; max-height:95%;">
+            <img id="imgPreviewImg" src="" alt="미리보기" style="max-width:100%; max-height:100%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+            <button type="button" onclick="closePreview()" style="position:absolute; top:-10px; right:-10px; background:#fff; border:none; border-radius:999px; width:36px; height:36px; box-shadow:0 2px 10px rgba(0,0,0,0.3); cursor:pointer;">✕</button>
+        </div>
+    </div>
     <div class="glass-container">
         <!-- iOS 26 Navigation -->
         <div class="ios-nav">
@@ -1826,7 +1833,7 @@ REQUESTS_TEMPLATE = r'''
                     <div class="request-image">
                         {% if req[9] %}
                         {% set img_url = req[9] if req[9].startswith('http') else '/images/' + req[9] %}
-                        <a href="{{ img_url }}" target="_blank">
+                        <a href="{{ img_url }}" onclick="event.preventDefault(); previewImage('{{ img_url }}');">
                             <img src="{{ img_url }}" class="request-image-thumb" alt="이미지" onerror="this.onerror=null; this.replaceWith(document.createTextNode('이미지 로드 실패: {{ req[9] }}'));">
                         </a>
                         <div class="detail-item" style="margin-top:4px; color:#666; font-size:12px;">{{ '이미지 URL' if req[9].startswith('http') else '파일명' }}: {{ req[9] }}</div>
@@ -1978,6 +1985,30 @@ REQUESTS_TEMPLATE = r'''
                     console.error(err);
                     alert('삭제 중 오류가 발생했습니다.');
                 });
+        }
+
+        // Image Preview (Lightbox)
+        function previewImage(url) {
+            try {
+                var modal = document.getElementById('imgPreview');
+                var img = document.getElementById('imgPreviewImg');
+                if (!modal || !img) return;
+                img.src = url;
+                modal.style.display = 'flex';
+                // ESC로 닫기
+                document.addEventListener('keydown', escCloseOnce);
+                // 배경 클릭으로 닫기
+                modal.onclick = function(e){ if (e.target === modal) { closePreview(); } };
+            } catch (e) { console.error(e); }
+        }
+        function escCloseOnce(e){ if (e.key === 'Escape') { closePreview(); document.removeEventListener('keydown', escCloseOnce); } }
+        function closePreview() {
+            try {
+                var modal = document.getElementById('imgPreview');
+                var img = document.getElementById('imgPreviewImg');
+                if (modal) modal.style.display = 'none';
+                if (img) img.src = '';
+            } catch (e) { console.error(e); }
         }
 
         // Set external image URL (S3/GCS/OneDrive public URL)
