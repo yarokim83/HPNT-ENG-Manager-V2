@@ -1828,14 +1828,11 @@ REQUESTS_TEMPLATE = r'''
                          <option value="rejected" {% if req[8] == 'rejected' %}selected{% endif %}>반려됨</option>
                      </select>
                  </div>
-                    
                     <!-- Image Section -->
                     <div class="request-image">
                         {% if req[9] %}
                         {% set img_url = req[9] if req[9].startswith('http') else '/images/' + req[9] %}
-                        <a href="{{ img_url }}" onclick="return openPreview(event, this);">
-                            <img src="{{ img_url }}" class="request-image-thumb" alt="이미지" referrerpolicy="no-referrer" onerror="(function(img, url, raw){ try { img.onerror = function(){ try { img.onerror=null; var a=document.createElement('a'); a.href = (raw||url); a.textContent='링크 클릭'; a.target='_blank'; a.rel='noopener noreferrer'; img.replaceWith(a); } catch(_e) { img.onerror=null; img.replaceWith(document.createTextNode('링크 클릭: ' + (raw||url))); } }; img.src = '/proxy-img?u=' + encodeURIComponent(url); } catch(e){ try { img.onerror=null; var a=document.createElement('a'); a.href=(raw||url); a.textContent='링크 클릭'; a.target='_blank'; a.rel='noopener noreferrer'; img.replaceWith(a); } catch(_e2) { img.onerror=null; img.replaceWith(document.createTextNode('링크 클릭: ' + (raw||url))); } })(this, '{{ img_url }}', '{{ req[9] }}');">
-                        </a>
+                        <img src="{{ img_url }}" class="request-image-thumb" alt="이미지" referrerpolicy="no-referrer" onerror="(function(img, url, raw){ try { img.onerror = function(){ try { img.onerror=null; var a=document.createElement('a'); a.href = (raw||url); a.textContent='링크 클릭'; a.target='_blank'; a.rel='noopener noreferrer'; img.replaceWith(a); } catch(_e) { img.onerror=null; img.replaceWith(document.createTextNode('링크 클릭: ' + (raw||url))); } }; img.src = '/proxy-img?u=' + encodeURIComponent(url); } catch(e){ try { img.onerror=null; var a=document.createElement('a'); a.href=(raw||url); a.textContent='링크 클릭'; a.target='_blank'; a.rel='noopener noreferrer'; img.replaceWith(a); } catch(_e2) { img.onerror=null; img.replaceWith(document.createTextNode('링크 클릭: ' + (raw||url))); } })(this, '{{ img_url }}', '{{ req[9] }}');">
                         <div class="detail-item" style="margin-top:4px; color:#666; font-size:12px;">{{ '이미지 URL' if req[9].startswith('http') else '파일명' }}: {{ req[9] }}</div>
                         <div class="request-actions" style="margin-top: 8px;">
                             <button type="button" onclick="deleteImage({{ req[0] }})" class="ios-button ios-button-glass ios-haptic">이미지 삭제</button>
