@@ -1686,7 +1686,7 @@ REQUESTS_TEMPLATE = r'''
     <!-- Image Preview Modal -->
     <div id="imgPreview" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
         <div style="position:relative; max-width:95%; max-height:95%;">
-            <img id="imgPreviewImg" src="" alt="미리보기" style="max-width:100%; max-height:100%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+            <img id="imgPreviewImg" src="" alt="미리보기" referrerpolicy="no-referrer" style="max-width:100%; max-height:100%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
             <button type="button" onclick="closePreview()" style="position:absolute; top:-10px; right:-10px; background:#fff; border:none; border-radius:999px; width:36px; height:36px; box-shadow:0 2px 10px rgba(0,0,0,0.3); cursor:pointer;">✕</button>
         </div>
     </div>
@@ -1833,8 +1833,8 @@ REQUESTS_TEMPLATE = r'''
                     <div class="request-image">
                         {% if req[9] %}
                         {% set img_url = req[9] if req[9].startswith('http') else '/images/' + req[9] %}
-                        <a href="{{ img_url }}" onclick="event.preventDefault(); previewImage('{{ img_url }}');">
-                            <img src="{{ img_url }}" class="request-image-thumb" alt="이미지" onerror="this.onerror=null; this.replaceWith(document.createTextNode('이미지 로드 실패: {{ req[9] }}'));">
+                        <a href="{{ img_url }}" onclick="return openPreview(event, this);">
+                            <img src="{{ img_url }}" class="request-image-thumb" alt="이미지" referrerpolicy="no-referrer" onerror="(function(img, url){ try { img.onerror = function(){ img.onerror=null; img.replaceWith(document.createTextNode('이미지 로드 실패: {{ req[9] }}')); }; img.src = '/proxy-img?u=' + encodeURIComponent(url); } catch(e){ img.onerror=null; img.replaceWith(document.createTextNode('이미지 로드 실패: {{ req[9] }}')); } })(this, '{{ img_url }}');">
                         </a>
                         <div class="detail-item" style="margin-top:4px; color:#666; font-size:12px;">{{ '이미지 URL' if req[9].startswith('http') else '파일명' }}: {{ req[9] }}</div>
                         <div class="request-actions" style="margin-top: 8px;">
@@ -1988,11 +1988,33 @@ REQUESTS_TEMPLATE = r'''
         }
 
         // Image Preview (Lightbox)
+        function openPreview(ev, anchor){
+            try { if (ev) ev.preventDefault(); } catch(e){}
+            try {
+                if (anchor && anchor.href) { previewImage(anchor.href); }
+                else if (anchor && anchor.getAttribute) { previewImage(anchor.getAttribute('href')); }
+            } catch(e){ console.error(e); }
+            return false;
+        }
         function previewImage(url) {
             try {
                 var modal = document.getElementById('imgPreview');
                 var img = document.getElementById('imgPreviewImg');
                 if (!modal || !img) return;
+                // 1차: 원본 URL 시도, 실패 시 2차: 프록시 시도, 그래도 실패 시 새 탭
+                img.onload = function(){};
+                img.onerror = function(){
+                    try {
+                        img.onerror = function(){
+                            try { closePreview(); } catch(e){}
+                            try { window.open(url, '_blank'); } catch(e){ console.error(e); }
+                        };
+                        img.src = '/proxy-img?u=' + encodeURIComponent(url);
+                    } catch(e){
+                        try { closePreview(); } catch(_){}
+                        try { window.open(url, '_blank'); } catch(_){}
+                    }
+                };
                 img.src = url;
                 modal.style.display = 'flex';
                 // ESC로 닫기
@@ -3115,6 +3137,31 @@ def admin_edit_image(request_id):
 
 # 중복된 admin_edit_material_info 라우트 제거됨 (다른 위치에 이미 정의되어 있음)
 
+# 외부 이미지 프록시 라우트 (핫링크/리퍼러/CORS 회피용 경량 프록시)
+@app.route('/proxy-img')
+def proxy_img():
+    try:
+        target = (request.args.get('u') or '').strip()
+        if not target or not (target.startswith('http://') or target.startswith('https://')):
+            return ('잘못된 URL', 400)
+        # urllib으로 간단히 프록시 (의존성 추가 없이)
+        import urllib.request
+        req = urllib.request.Request(
+            target,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+                'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                'Referer': ''
+            }
+        )
+        with urllib.request.urlopen(req, timeout=7) as resp:
+            data = resp.read()
+            content_type = resp.headers.get('Content-Type', 'image/jpeg')
+            return Response(data, mimetype=content_type)
+    except Exception as e:
+        logger.error(f"proxy-img 실패: {e}")
+        return ('이미지를 가져올 수 없습니다.', 502)
+
 # 외부 이미지 URL 저장 라우트
 @app.route('/admin/image-url/<int:request_id>', methods=['POST'])
 def admin_set_image_url(request_id):
@@ -3144,7 +3191,6 @@ def admin_set_image_url(request_id):
 def admin_copy_request(request_id):
     """관리자 자재요청 복사"""
     try:
-        # SQLite 사용 (기존 로직)
         db_path = get_material_db_path()
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
