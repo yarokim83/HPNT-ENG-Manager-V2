@@ -1683,7 +1683,13 @@ REQUESTS_TEMPLATE = r'''
             }
         })();
     </script>
-    <!-- (removed image preview modal) -->
+    <!-- Image Preview Modal -->
+    <div id="imgPreview" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="position:relative; max-width:95%; max-height:95%;">
+            <img id="imgPreviewImg" src="" alt="미리보기" referrerpolicy="no-referrer" style="max-width:100%; max-height:100%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+            <button type="button" onclick="closePreview()" style="position:absolute; top:-10px; right:-10px; background:#fff; border:none; border-radius:999px; width:36px; height:36px; box-shadow:0 2px 10px rgba(0,0,0,0.3); cursor:pointer;">✕</button>
+        </div>
+    </div>
     <div class="glass-container">
         <!-- iOS 26 Navigation -->
         <div class="ios-nav">
@@ -1827,8 +1833,8 @@ REQUESTS_TEMPLATE = r'''
                     <div class="request-image">
                         {% if req[9] %}
                         {% set img_url = req[9] if req[9].startswith('http') else '/images/' + req[9] %}
-                        <a href="{{ img_url }}" target="_blank">
-                            <img src="{{ img_url }}" class="request-image-thumb" alt="이미지" referrerpolicy="no-referrer" onerror="(function(img, url){ try { img.onerror = function(){ img.onerror=null; img.replaceWith(document.createTextNode('이미지 로드 실패: {{ req[9] }}')); }; img.src = '/proxy-img?u=' + encodeURIComponent(url); } catch(e){ img.onerror=null; img.replaceWith(document.createTextNode('이미지 로드 실패: {{ req[9] }}')); } })(this, '{{ img_url }}');">
+                        <a href="{{ img_url }}" onclick="return openPreview(event, this);">
+                            <img src="{{ img_url }}" class="request-image-thumb" alt="이미지" referrerpolicy="no-referrer" onerror="(function(img, url, raw){ try { img.onerror = function(){ try { img.onerror=null; var a=document.createElement('a'); a.href = (raw||url); a.textContent='링크 클릭'; a.target='_blank'; a.rel='noopener noreferrer'; img.replaceWith(a); } catch(_e) { img.onerror=null; img.replaceWith(document.createTextNode('링크 클릭: ' + (raw||url))); } }; img.src = '/proxy-img?u=' + encodeURIComponent(url); } catch(e){ try { img.onerror=null; var a=document.createElement('a'); a.href=(raw||url); a.textContent='링크 클릭'; a.target='_blank'; a.rel='noopener noreferrer'; img.replaceWith(a); } catch(_e2) { img.onerror=null; img.replaceWith(document.createTextNode('링크 클릭: ' + (raw||url))); } })(this, '{{ img_url }}', '{{ req[9] }}');">
                         </a>
                         <div class="detail-item" style="margin-top:4px; color:#666; font-size:12px;">{{ '이미지 URL' if req[9].startswith('http') else '파일명' }}: {{ req[9] }}</div>
                         <div class="request-actions" style="margin-top: 8px;">
@@ -1981,7 +1987,67 @@ REQUESTS_TEMPLATE = r'''
                 });
         }
 
-        // (removed image preview/lightbox)
+        // Image Preview (Lightbox)
+        function openPreview(ev, anchor){
+            try { if (ev) ev.preventDefault(); } catch(e){}
+            try {
+                var url = anchor && anchor.href ? anchor.href : (anchor && anchor.getAttribute ? anchor.getAttribute('href') : '');
+                if (!url) return false;
+                // 6초 타임아웃: 미리보기 지연 시 새 탭 폴백
+                var modal = document.getElementById('imgPreview');
+                if (modal) {
+                    if (modal._previewTimer) { clearTimeout(modal._previewTimer); }
+                    modal._previewTimer = setTimeout(function(){
+                        try { closePreview(); } catch(e){}
+                        try { window.open(url, '_blank'); } catch(e){}
+                    }, 6000);
+                }
+                previewImage(url);
+            } catch(e){ console.error(e); }
+            return false;
+        }
+        function previewImage(url) {
+            try {
+                var modal = document.getElementById('imgPreview');
+                var img = document.getElementById('imgPreviewImg');
+                if (!modal || !img) return;
+                // 1차: 원본 URL 시도, 실패 시 2차: 프록시 시도, 그래도 실패 시 새 탭
+                img.onload = function(){
+                    try {
+                        var modalEl = document.getElementById('imgPreview');
+                        if (modalEl && modalEl._previewTimer) { clearTimeout(modalEl._previewTimer); modalEl._previewTimer = null; }
+                    } catch(e){}
+                };
+                img.onerror = function(){
+                    try {
+                        img.onerror = function(){
+                            try { closePreview(); } catch(e){}
+                            try { window.open(url, '_blank'); } catch(e){ console.error(e); }
+                        };
+                        img.src = '/proxy-img?u=' + encodeURIComponent(url);
+                    } catch(e){
+                        try { closePreview(); } catch(_){ }
+                        try { window.open(url, '_blank'); } catch(_){ }
+                    }
+                };
+                img.src = url;
+                modal.style.display = 'flex';
+                // ESC로 닫기
+                document.addEventListener('keydown', escCloseOnce);
+                // 배경 클릭으로 닫기
+                modal.onclick = function(e){ if (e.target === modal) { closePreview(); } };
+            } catch (e) { console.error(e); }
+        }
+        function escCloseOnce(e){ if (e.key === 'Escape') { closePreview(); document.removeEventListener('keydown', escCloseOnce); } }
+        function closePreview() {
+            try {
+                var modal = document.getElementById('imgPreview');
+                var img = document.getElementById('imgPreviewImg');
+                if (modal) modal.style.display = 'none';
+                if (modal && modal._previewTimer) { clearTimeout(modal._previewTimer); modal._previewTimer = null; }
+                if (img) img.src = '';
+            } catch (e) { console.error(e); }
+        }
 
         // Set external image URL (S3/GCS/OneDrive public URL)
         function setImageUrl(requestId) {
