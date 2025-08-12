@@ -1991,8 +1991,18 @@ REQUESTS_TEMPLATE = r'''
         function openPreview(ev, anchor){
             try { if (ev) ev.preventDefault(); } catch(e){}
             try {
-                if (anchor && anchor.href) { previewImage(anchor.href); }
-                else if (anchor && anchor.getAttribute) { previewImage(anchor.getAttribute('href')); }
+                var url = anchor && anchor.href ? anchor.href : (anchor && anchor.getAttribute ? anchor.getAttribute('href') : '');
+                if (!url) return false;
+                // 6초 타임아웃: 미리보기 지연 시 새 탭 폴백
+                var modal = document.getElementById('imgPreview');
+                if (modal) {
+                    if (modal._previewTimer) { clearTimeout(modal._previewTimer); }
+                    modal._previewTimer = setTimeout(function(){
+                        try { closePreview(); } catch(e){}
+                        try { window.open(url, '_blank'); } catch(e){}
+                    }, 6000);
+                }
+                previewImage(url);
             } catch(e){ console.error(e); }
             return false;
         }
@@ -2002,7 +2012,12 @@ REQUESTS_TEMPLATE = r'''
                 var img = document.getElementById('imgPreviewImg');
                 if (!modal || !img) return;
                 // 1차: 원본 URL 시도, 실패 시 2차: 프록시 시도, 그래도 실패 시 새 탭
-                img.onload = function(){};
+                img.onload = function(){
+                    try {
+                        var modalEl = document.getElementById('imgPreview');
+                        if (modalEl && modalEl._previewTimer) { clearTimeout(modalEl._previewTimer); modalEl._previewTimer = null; }
+                    } catch(e){}
+                };
                 img.onerror = function(){
                     try {
                         img.onerror = function(){
@@ -2011,8 +2026,8 @@ REQUESTS_TEMPLATE = r'''
                         };
                         img.src = '/proxy-img?u=' + encodeURIComponent(url);
                     } catch(e){
-                        try { closePreview(); } catch(_){}
-                        try { window.open(url, '_blank'); } catch(_){}
+                        try { closePreview(); } catch(_){ }
+                        try { window.open(url, '_blank'); } catch(_){ }
                     }
                 };
                 img.src = url;
@@ -2029,6 +2044,7 @@ REQUESTS_TEMPLATE = r'''
                 var modal = document.getElementById('imgPreview');
                 var img = document.getElementById('imgPreviewImg');
                 if (modal) modal.style.display = 'none';
+                if (modal && modal._previewTimer) { clearTimeout(modal._previewTimer); modal._previewTimer = null; }
                 if (img) img.src = '';
             } catch (e) { console.error(e); }
         }
