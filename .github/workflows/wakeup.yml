@@ -11,9 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Ping root domain
+      - name: Ping root domain (/healthz)
         run: |
-          curl -sS -m 15 -L https://yaro8583.cloud/ -o /dev/null -w "%{http_code}\n"
-      - name: Ping www domain
+          curl -fsS -m 15 -L https://yaro8583.cloud/healthz -o /dev/null -w "code=%{http_code}\n"
+      - name: Ping www domain (/healthz)
         run: |
-          curl -sS -m 15 -L https://www.yaro8583.cloud/ -o /dev/null -w "%{http_code}\n"
+          curl -fsS -m 15 -L https://www.yaro8583.cloud/healthz -o /dev/null -w "code=%{http_code}\n"

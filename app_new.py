@@ -56,6 +56,20 @@ def get_app_version():
     """앱 버전 반환 (캐시 무효화용)"""
     return APP_VERSION
 
+# Lightweight health check endpoint (no DB access)
+@app.route('/healthz', methods=['GET'])
+def healthz():
+    """헬스체크: 외부 모니터링/스케줄러가 서비스 생존 여부를 확인할 때 사용"""
+    try:
+        payload = {
+            "status": "ok",
+            "version": get_app_version(),
+        }
+        return jsonify(payload), 200
+    except Exception as e:
+        # 어떤 오류도 500으로 노출하여 오토리커버 트리거 가능
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 # Gunicorn 환경에서 __main__ 블록이 실행되지 않을 수 있어, 최초 요청에 1회 DB 초기화 보장
 import threading as _th
 _DB_INIT_DONE = False
