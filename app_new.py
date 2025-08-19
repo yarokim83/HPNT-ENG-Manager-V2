@@ -193,7 +193,9 @@ def detect_environment():
 
 def is_cloud_env():
     """클라우드 환경 여부 확인"""
-    return detect_environment() in ['render', 'railway']
+    # detect_environment() returns 'cloud' for Render/Railway generic cloud envs
+    # Include 'cloud' to ensure proper path handling (e.g., images under db/images)
+    return detect_environment() in ['cloud', 'render', 'railway']
 
 def get_material_db_path():
     """자재관리 DB 경로 결정 - OneDrive 연동"""
