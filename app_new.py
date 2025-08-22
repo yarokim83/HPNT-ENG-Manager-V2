@@ -923,9 +923,9 @@ HOME_TEMPLATE = '''
                     📋 자재요청 목록
                 </a>
                 
-                <a href="/stats?v={{ version }}" class="ios-button ios-button-glass ios-haptic">
-                    🆕 신규 기능
-                </a>
+                <button id="searchWidgetTrigger" type="button" class="ios-button ios-button-glass ios-haptic">
+                    🧠 신규기능 (AI 검색)
+                </button>
             </div>
 
             
@@ -1055,6 +1055,12 @@ HOME_TEMPLATE = '''
             }
         });
     </script>
+    <!-- Vertex AI Search Widget Integration -->
+    <script src="https://cloud.google.com/ai/gen-app-builder/client?hl=ko"></script>
+    <gen-search-widget
+      configId="dfa50f94-fdb2-4b07-81bb-433c1844f9d1"
+      triggerId="searchWidgetTrigger">
+    </gen-search-widget>
 </body>
 </html>
 '''
