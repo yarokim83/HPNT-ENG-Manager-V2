@@ -40,6 +40,10 @@
                 <a href="/add" class="ios-button ios-button-success ios-haptic ios-fade-in">
                     ➕ 새 요청 등록
                 </a>
+                <!-- 신규기능: Vertex AI 검색 위젯 트리거 버튼 -->
+                <button id="searchWidgetTrigger" type="button" class="ios-button ios-button-warning ios-haptic ios-fade-in">
+                    🧠 신규기능 (AI 검색)
+                </button>
             </div>
             
             <!-- Statistics Cards -->
@@ -173,5 +177,15 @@
             }, 100);
         });
     </script>
+
+    <!-- Vertex AI Search Widget Integration -->
+    <!-- Widget JavaScript bundle -->
+    <script src="https://cloud.google.com/ai/gen-app-builder/client?hl=ko"></script>
+
+    <!-- Search widget element is not visible by default -->
+    <gen-search-widget
+      configId="dfa50f94-fdb2-4b07-81bb-433c1844f9d1"
+      triggerId="searchWidgetTrigger">
+    </gen-search-widget>
 </body>
 </html>
