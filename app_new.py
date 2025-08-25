@@ -1072,7 +1072,40 @@ HOME_TEMPLATE = '''
                         });
                         const data = await resp.json().catch(() => ({}));
                         if (resp.ok && data && data.success) {
-                            // 인증 성공: 실제 트리거 클릭으로 위젯 열기
+                            // 인증 성공: 위젯 스크립트를 지연 로드 후 위젯 생성 및 트리거
+                            const ensureWidgetLoaded = () => new Promise((resolve, reject) => {
+                                try {
+                                    if (window.customElements && window.customElements.get && window.customElements.get('gen-search-widget')) {
+                                        resolve();
+                                        return;
+                                    }
+                                    const existing = document.querySelector('script[data-gen-app-builder]');
+                                    if (existing) {
+                                        existing.addEventListener('load', () => resolve());
+                                        existing.addEventListener('error', () => reject(new Error('위젯 스크립트 로드 실패')));
+                                        return;
+                                    }
+                                    const s = document.createElement('script');
+                                    s.async = true;
+                                    s.src = 'https://cloud.google.com/ai/gen-app-builder/client?hl=ko';
+                                    s.setAttribute('data-gen-app-builder', '1');
+                                    s.onload = () => resolve();
+                                    s.onerror = () => reject(new Error('위젯 스크립트 로드 실패'));
+                                    document.head.appendChild(s);
+                                } catch (err) { reject(err); }
+                            });
+
+                            await ensureWidgetLoaded();
+
+                            // 위젯 요소가 없으면 동적으로 추가
+                            let widget = document.querySelector('gen-search-widget');
+                            if (!widget) {
+                                widget = document.createElement('gen-search-widget');
+                                widget.setAttribute('configId', 'dfa50f94-fdb2-4b07-81bb-433c1844f9d1');
+                                widget.setAttribute('triggerId', 'searchWidgetRealTrigger');
+                                document.body.appendChild(widget);
+                            }
+                            // 실제 트리거 클릭으로 위젯 열기
                             realTrigger.click();
                         } else {
                             alert('비밀번호가 올바르지 않습니다.');
@@ -1092,12 +1125,7 @@ HOME_TEMPLATE = '''
             }
         });
     </script>
-    <!-- Vertex AI Search Widget Integration -->
-    <script src="https://cloud.google.com/ai/gen-app-builder/client?hl=ko"></script>
-    <gen-search-widget
-      configId="dfa50f94-fdb2-4b07-81bb-433c1844f9d1"
-      triggerId="searchWidgetRealTrigger">
-    </gen-search-widget>
+    <!-- Vertex AI Search Widget Integration: 동적 로드 (인증 후) -->
 </body>
 </html>
 '''
