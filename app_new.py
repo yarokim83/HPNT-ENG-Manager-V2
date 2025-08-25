@@ -983,7 +983,6 @@ HOME_TEMPLATE = '''
                         .then(regs => regs.forEach(r => r.unregister().catch(()=>{})))
                         .catch(()=>{});
                 }
-                console.log('SW not registered (add ?sw=1 to enable)');
             }
         }
 
