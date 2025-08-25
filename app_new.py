@@ -2784,9 +2784,14 @@ def requests_page():
             params.append(status_filter)
         
         if search_query:
-            query += " AND (item_name LIKE ? OR specifications LIKE ? OR reason LIKE ?)"
+            query += " AND ("
+            query += "LOWER(item_name) LIKE LOWER(?) OR "
+            query += "LOWER(specifications) LIKE LOWER(?) OR "
+            query += "LOWER(reason) LIKE LOWER(?) OR "
+            query += "LOWER(vendor) LIKE LOWER(?)"
+            query += ")"
             search_param = f"%{search_query}%"
-            params.extend([search_param, search_param, search_param])
+            params.extend([search_param, search_param, search_param, search_param])
         
         query += " ORDER BY id DESC"
         
