@@ -10,7 +10,7 @@ import sys
 import json
 from datetime import datetime
 from pathlib import Path
-from flask import Flask, render_template_string, request, jsonify, redirect, url_for, send_from_directory, Response
+from flask import Flask, render_template_string, request, jsonify, redirect, url_for, send_from_directory, Response, session
 from werkzeug.utils import secure_filename
 import logging
 import base64
@@ -923,9 +923,12 @@ HOME_TEMPLATE = '''
                     📋 자재요청 목록
                 </a>
                 
-                <button id="searchWidgetTrigger" type="button" class="ios-button ios-button-glass ios-haptic">
+                <!-- 보안 게이트 버튼 (사용자 클릭) -->
+                <button id="featureAccessBtn" type="button" class="ios-button ios-button-glass ios-haptic">
                     🧠 신규기능 (AI 검색)
                 </button>
+                <!-- 실제 위젯 트리거는 숨김 처리 -->
+                <button id="searchWidgetRealTrigger" type="button" style="display:none"></button>
             </div>
 
             
@@ -1046,6 +1049,33 @@ HOME_TEMPLATE = '''
             setTimeout(() => {
                 showDynamicIsland('HPNT ENG Manager V2.0');
             }, 500);
+
+            // 신규 기능 보안 게이트: 비밀번호 확인 후 위젯 오픈
+            const accessBtn = document.getElementById('featureAccessBtn');
+            const realTrigger = document.getElementById('searchWidgetRealTrigger');
+            if (accessBtn && realTrigger) {
+                accessBtn.addEventListener('click', async () => {
+                    try {
+                        const pwd = prompt('신규 기능 접근 비밀번호를 입력하세요');
+                        if (pwd === null) return; // 취소
+                        const resp = await fetch('/feature-auth', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: pwd })
+                        });
+                        const data = await resp.json().catch(() => ({}));
+                        if (resp.ok && data && data.success) {
+                            // 인증 성공: 실제 트리거 클릭으로 위젯 열기
+                            realTrigger.click();
+                        } else {
+                            alert('비밀번호가 올바르지 않습니다.');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert('인증 중 오류가 발생했습니다.');
+                    }
+                });
+            }
         });
 
         // 페이지 가시성 변경 시 데이터 새로고침
@@ -1059,7 +1089,7 @@ HOME_TEMPLATE = '''
     <script src="https://cloud.google.com/ai/gen-app-builder/client?hl=ko"></script>
     <gen-search-widget
       configId="dfa50f94-fdb2-4b07-81bb-433c1844f9d1"
-      triggerId="searchWidgetTrigger">
+      triggerId="searchWidgetRealTrigger">
     </gen-search-widget>
 </body>
 </html>
@@ -2754,6 +2784,21 @@ def home():
     except Exception as e:
         logger.error(f"홈페이지 로드 실패: {e}")
         return f"<h1>❌ 오류</h1><p>페이지를 불러올 수 없습니다: {e}</p>"
+
+# 신규 기능(위젯) 접근 인증 엔드포인트
+@app.route('/feature-auth', methods=['POST'])
+def feature_auth():
+    try:
+        payload = request.get_json(silent=True) or {}
+        password = (payload.get('password') or '').strip()
+        # 비밀번호는 환경변수 우선, 없으면 기본값 사용
+        expected = os.environ.get('FEATURE_PASSWORD') or os.environ.get('NEW_FEATURE_PASSWORD') or 'hpnt-ai-2025'
+        if password and password == expected:
+            session['feature_unlocked'] = True
+            return jsonify({"success": True}), 200
+        return jsonify({"success": False, "error": "invalid_password"}), 401
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/requests')
 def requests_page():
