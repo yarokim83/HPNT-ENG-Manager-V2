@@ -2872,7 +2872,7 @@ def home():
                                     stats=stats,
                                     get_app_version=get_app_version))
         # 기본 CSP: 위젯 지연 로드 허용, 그 외는 self 위주
-        resp.headers['Content-Security-Policy'] = "default-src 'self' https://cloud.google.com https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cloud.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self'"
+        resp.headers['Content-Security-Policy'] = "default-src 'self' https://cloud.google.com https://fonts.googleapis.com https://fonts.gstatic.com https://www.gstatic.com; script-src 'self' 'unsafe-inline' https://cloud.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https://cloud.google.com https://www.googleapis.com https://www.gstatic.com"
         resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         resp.headers['Pragma'] = 'no-cache'
         resp.headers['Expires'] = '0'
