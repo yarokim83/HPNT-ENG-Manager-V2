@@ -2873,14 +2873,14 @@ def home():
                                     get_app_version=get_app_version))
         # 기본 CSP: 위젯 지연 로드 허용, 그 외는 self 위주
         resp.headers['Content-Security-Policy'] = (
-            "default-src 'self' https://cloud.google.com https://fonts.googleapis.com https://fonts.gstatic.com https://www.gstatic.com; "
-            "script-src 'self' 'unsafe-inline' https://cloud.google.com https://www.gstatic.com; "
-            "script-src-elem 'self' 'unsafe-inline' https://cloud.google.com https://www.gstatic.com; "
+            "default-src 'self' https://cloud.google.com https://fonts.googleapis.com https://fonts.gstatic.com https://www.gstatic.com https://www.google.com https://www.googletagmanager.com; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cloud.google.com https://www.gstatic.com https://www.google.com https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com https://www.recaptcha.net; "
+            "script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://cloud.google.com https://www.gstatic.com https://www.google.com https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com https://www.recaptcha.net; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "img-src 'self' data: blob:; "
-            "connect-src 'self' https://cloud.google.com https://www.googleapis.com https://www.gstatic.com https://content-ucs.googleapis.com https://*.googleapis.com; "
+            "img-src 'self' data: blob: https://www.gstatic.com https://www.google.com; "
+            "connect-src 'self' https://cloud.google.com https://www.googleapis.com https://www.gstatic.com https://content-ucs.googleapis.com https://*.googleapis.com https://www.google-analytics.com https://www.googletagmanager.com https://www.google.com; "
             "font-src 'self' https://fonts.gstatic.com; "
-            "frame-src 'self' https://cloud.google.com https://www.gstatic.com; "
+            "frame-src 'self' https://cloud.google.com https://www.gstatic.com https://www.google.com https://www.recaptcha.net; "
             "worker-src 'self' blob:;"
         )
         resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
