@@ -792,6 +792,16 @@ HOME_TEMPLATE = '''
         }
     </style>
     <script>
+    // Ensure any old Service Workers are unregistered to avoid stale cached JS
+    (function(){
+      try {
+        if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+          navigator.serviceWorker.getRegistrations().then(function(regs){
+            regs.forEach(function(r){ r.unregister().catch(()=>{}); });
+          }).catch(()=>{});
+        }
+      } catch (e) { /* ignore */ }
+    })();
     // Inline Edit via Double-Click (now inside <script>)
     (function(){
         window.startEdit = function(requestId) {
@@ -1062,7 +1072,7 @@ HOME_TEMPLATE = '''
                             'Render 설정 방법:',
                             'Dashboard > Services > 해당 서비스 > Environment 탭 > Add Environment Variable',
                             'Key: FEATURE_PASSWORD, Value: 원하는 비밀번호'
-                        ].join('\n');
+                        ].join('\\n');
                         const pwd = prompt(msg);
                         if (pwd === null) return; // 취소
                         const resp = await fetch('/feature-auth', {
@@ -1126,6 +1136,47 @@ HOME_TEMPLATE = '''
         });
     </script>
     <!-- Vertex AI Search Widget Integration: 동적 로드 (인증 후) -->
+</body>
+</html>
+'''
+
+# 안전 모드 홈 (스크립트 최소화, 파싱 오류 진단용)
+SAFE_HOME_TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HPNT ENG Manager - Safe</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; max-width: 680px; margin: 0 auto }
+    .row { margin: 12px 0 }
+    .btn { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; background:#f7f7f7; cursor:pointer }
+  </style>
+  <script>
+    window.addEventListener('DOMContentLoaded', function(){
+      console.log('[SAFE_HOME] loaded OK');
+      document.getElementById('aiBtn').addEventListener('click', function(){
+        alert('AI 기능은 안전 모드에서 비활성화되었습니다. URL의 ?safe=1을 제거해주세요.');
+      });
+    });
+  </script>
+  <!-- 안전 모드: 외부 스크립트/스타일 없음 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"> 
+  
+  
+</head>
+<body>
+  <div class="card">
+    <h2>HPNT ENG Manager - Safe Mode</h2>
+    <div class="row">이 페이지는 파싱 오류 진단을 위한 최소 구성입니다.</div>
+    <div class="row">
+      <a class="btn" href="/">일반 모드로 이동</a>
+      <button id="aiBtn" class="btn">🧠 신규기능 (AI 검색)</button>
+      <a class="btn" href="/requests">📋 자재요청 목록</a>
+    </div>
+  </div>
 </body>
 </html>
 '''
@@ -2759,12 +2810,16 @@ ADD_TEMPLATE = '''
 # Flask 라우트 함수들
 @app.route('/')
 def home():
-    """메인 홈페이지 - 캐시 무효화 리다이렉트"""
-    # 버전 파라미터가 없으면 리다이렉트
-    version_param = request.args.get('v')
-    if not version_param:
-        return redirect(f'/?v={APP_VERSION}')
-    
+    """메인 홈페이지 - 안전 모드 지원 및 통계 표시"""
+    # 안전 모드: 스크립트 최소화 페이지로 렌더
+    if request.args.get('safe') == '1':
+        resp = make_response(render_template_string(SAFE_HOME_TEMPLATE))
+        resp.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'"
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
+
     try:
         env = detect_environment().upper()
         db_location = "로컬 DB (프로젝트/db)"
@@ -2810,12 +2865,18 @@ def home():
                 'completed': 0
             }
         
-        return render_template_string(HOME_TEMPLATE, 
+        resp = make_response(render_template_string(HOME_TEMPLATE, 
                                     environment=env,
                                     db_location=db_location,
                                     version=APP_VERSION,
                                     stats=stats,
-                                    get_app_version=get_app_version)
+                                    get_app_version=get_app_version))
+        # 기본 CSP: 위젯 지연 로드 허용, 그 외는 self 위주
+        resp.headers['Content-Security-Policy'] = "default-src 'self' https://cloud.google.com https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cloud.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self'"
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
     except Exception as e:
         logger.error(f"홈페이지 로드 실패: {e}")
         return f"<h1>❌ 오류</h1><p>페이지를 불러올 수 없습니다: {e}</p>"
