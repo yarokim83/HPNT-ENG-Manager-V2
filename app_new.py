@@ -969,11 +969,22 @@ HOME_TEMPLATE = '''
                 window.deleteImage = function(){ console.warn('deleteImage not ready'); };
             }
         })();
-        // PWA 등록
+        // PWA 등록 (옵트인: ?sw=1 일 때만 등록)
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('SW registered'))
-                .catch(err => console.log('SW registration failed'));
+            const swParam = new URLSearchParams(location.search).get('sw');
+            if (swParam === '1') {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.log('SW registration failed'));
+            } else {
+                // 기본은 등록 해제(기존 등록분이 있으면 제거)
+                if (navigator.serviceWorker.getRegistrations) {
+                    navigator.serviceWorker.getRegistrations()
+                        .then(regs => regs.forEach(r => r.unregister().catch(()=>{})))
+                        .catch(()=>{});
+                }
+                console.log('SW not registered (add ?sw=1 to enable)');
+            }
         }
 
         // === iOS 26 JavaScript Functions ===
