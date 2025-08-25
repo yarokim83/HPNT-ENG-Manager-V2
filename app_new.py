@@ -1129,7 +1129,18 @@ HOME_TEMPLATE = '''
                             // 실제 트리거 클릭으로 위젯 열기
                             realTrigger.click();
                         } else {
-                            alert('비밀번호가 올바르지 않습니다.');
+                            try {
+                                if (resp.status === 401) {
+                                    alert('비밀번호가 올바르지 않습니다.');
+                                } else if (resp.status >= 500) {
+                                    alert('서버 오류가 발생했습니다. 잠시 후 다시 시도하세요.');
+                                } else {
+                                    alert('요청이 처리되지 않았습니다. 네트워크 또는 보안 설정을 확인하세요.');
+                                }
+                                console.warn('[feature-auth] status=', resp.status, 'data=', data);
+                            } catch (ignored) {
+                                alert('요청 처리 중 알 수 없는 오류가 발생했습니다.');
+                            }
                         }
                     } catch (e) {
                         console.error(e);
@@ -2909,11 +2920,27 @@ def feature_auth():
         payload = request.get_json(silent=True) or {}
         password = (payload.get('password') or '').strip()
         # 비밀번호는 환경변수 우선, 없으면 기본값 사용
-        expected = os.environ.get('FEATURE_PASSWORD') or os.environ.get('NEW_FEATURE_PASSWORD') or 'hpnt-ai-2025'
+        _env_pwd = os.environ.get('FEATURE_PASSWORD') or os.environ.get('NEW_FEATURE_PASSWORD')
+        expected = _env_pwd or 'hpnt-ai-2025'
+        admin_debug = str(os.environ.get('ADMIN_DEBUG', '')).strip() in ('1','true','True','yes','on')
+        source = 'env' if _env_pwd else 'default'
+
+        # 최소 진단 로그(비밀번호 값은 로그에 남기지 않음)
+        try:
+            logger.info(f"feature_auth attempt: admin_debug={admin_debug}, source={source}")
+        except Exception:
+            pass
+
         if password and password == expected:
             session['feature_unlocked'] = True
-            return jsonify({"success": True}), 200
-        return jsonify({"success": False, "error": "invalid_password"}), 401
+            resp = {"success": True}
+            if admin_debug:
+                resp["source"] = source
+            return jsonify(resp), 200
+        resp = {"success": False, "error": "invalid_password"}
+        if admin_debug:
+            resp["source"] = source
+        return jsonify(resp), 401
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
