@@ -1056,7 +1056,14 @@ HOME_TEMPLATE = '''
             if (accessBtn && realTrigger) {
                 accessBtn.addEventListener('click', async () => {
                     try {
-                        const pwd = prompt('신규 기능 접근 비밀번호를 입력하세요\n\nRender 설정 방법:\nDashboard > Services > 해당 서비스 > Environment 탭 > Add Environment Variable\nKey: FEATURE_PASSWORD, Value: 원하는 비밀번호');
+                        const msg = [
+                            '신규 기능 접근 비밀번호를 입력하세요',
+                            '',
+                            'Render 설정 방법:',
+                            'Dashboard > Services > 해당 서비스 > Environment 탭 > Add Environment Variable',
+                            'Key: FEATURE_PASSWORD, Value: 원하는 비밀번호'
+                        ].join('\n');
+                        const pwd = prompt(msg);
                         if (pwd === null) return; // 취소
                         const resp = await fetch('/feature-auth', {
                             method: 'POST',
