@@ -1074,8 +1074,56 @@ HOME_TEMPLATE = '''
             const accessBtn = document.getElementById('featureAccessBtn');
             const realTrigger = document.getElementById('searchWidgetRealTrigger');
             if (accessBtn && realTrigger) {
+                // 전역 플래그: 서버 세션 기준으로 인증 여부 캐시
+                window.__featureUnlocked = false;
+
+                // 재사용 가능한 위젯 오픈 유틸
+                const ensureWidgetLoaded = () => new Promise((resolve, reject) => {
+                    try {
+                        if (window.customElements && window.customElements.get && window.customElements.get('gen-search-widget')) {
+                            resolve();
+                            return;
+                        }
+                        const existing = document.querySelector('script[data-gen-app-builder]');
+                        if (existing) {
+                            existing.addEventListener('load', () => resolve());
+                            existing.addEventListener('error', () => reject(new Error('위젯 스크립트 로드 실패')));
+                            return;
+                        }
+                        const s = document.createElement('script');
+                        s.async = true;
+                        s.src = 'https://cloud.google.com/ai/gen-app-builder/client?hl=ko';
+                        s.setAttribute('data-gen-app-builder', '1');
+                        s.onload = () => resolve();
+                        s.onerror = () => reject(new Error('위젯 스크립트 로드 실패'));
+                        document.head.appendChild(s);
+                    } catch (err) { reject(err); }
+                });
+
+                const openWidgetNow = async () => {
+                    await ensureWidgetLoaded();
+                    let widget = document.querySelector('gen-search-widget');
+                    if (!widget) {
+                        widget = document.createElement('gen-search-widget');
+                        widget.setAttribute('configId', 'dfa50f94-fdb2-4b07-81bb-433c1844f9d1');
+                        widget.setAttribute('triggerId', 'searchWidgetRealTrigger');
+                        document.body.appendChild(widget);
+                    }
+                    realTrigger.click();
+                };
+
+                // 초기 세션 상태 확인(이미 인증된 경우 즉시 열도록 준비)
+                fetch('/feature-auth', { method: 'GET' })
+                  .then(r => r.json()).then(j => { if (j && j.unlocked) window.__featureUnlocked = true; })
+                  .catch(() => {});
+
                 accessBtn.addEventListener('click', async () => {
                     try {
+                        if (window.__featureUnlocked) {
+                            await openWidgetNow();
+                            return;
+                        }
+
                         const msg = [
                             '신규 기능 접근 비밀번호를 입력하세요',
                             '',
@@ -1092,41 +1140,8 @@ HOME_TEMPLATE = '''
                         });
                         const data = await resp.json().catch(() => ({}));
                         if (resp.ok && data && data.success) {
-                            // 인증 성공: 위젯 스크립트를 지연 로드 후 위젯 생성 및 트리거
-                            const ensureWidgetLoaded = () => new Promise((resolve, reject) => {
-                                try {
-                                    if (window.customElements && window.customElements.get && window.customElements.get('gen-search-widget')) {
-                                        resolve();
-                                        return;
-                                    }
-                                    const existing = document.querySelector('script[data-gen-app-builder]');
-                                    if (existing) {
-                                        existing.addEventListener('load', () => resolve());
-                                        existing.addEventListener('error', () => reject(new Error('위젯 스크립트 로드 실패')));
-                                        return;
-                                    }
-                                    const s = document.createElement('script');
-                                    s.async = true;
-                                    s.src = 'https://cloud.google.com/ai/gen-app-builder/client?hl=ko';
-                                    s.setAttribute('data-gen-app-builder', '1');
-                                    s.onload = () => resolve();
-                                    s.onerror = () => reject(new Error('위젯 스크립트 로드 실패'));
-                                    document.head.appendChild(s);
-                                } catch (err) { reject(err); }
-                            });
-
-                            await ensureWidgetLoaded();
-
-                            // 위젯 요소가 없으면 동적으로 추가
-                            let widget = document.querySelector('gen-search-widget');
-                            if (!widget) {
-                                widget = document.createElement('gen-search-widget');
-                                widget.setAttribute('configId', 'dfa50f94-fdb2-4b07-81bb-433c1844f9d1');
-                                widget.setAttribute('triggerId', 'searchWidgetRealTrigger');
-                                document.body.appendChild(widget);
-                            }
-                            // 실제 트리거 클릭으로 위젯 열기
-                            realTrigger.click();
+                            window.__featureUnlocked = true;
+                            await openWidgetNow();
                         } else {
                             try {
                                 if (resp.status === 401) {
@@ -2913,9 +2928,14 @@ def home():
         return f"<h1>❌ 오류</h1><p>페이지를 불러올 수 없습니다: {e}</p>"
 
 # 신규 기능(위젯) 접근 인증 엔드포인트
-@app.route('/feature-auth', methods=['POST'])
+@app.route('/feature-auth', methods=['GET', 'POST'])
 def feature_auth():
     try:
+        # 상태 조회: 세션의 feature_unlocked 여부 반환
+        if request.method == 'GET':
+            unlocked = bool(session.get('feature_unlocked'))
+            return jsonify({"unlocked": unlocked}), 200
+
         payload = request.get_json(silent=True) or {}
         password = (payload.get('password') or '').strip()
         # 비밀번호는 환경변수 우선, 없으면 기본값 사용
